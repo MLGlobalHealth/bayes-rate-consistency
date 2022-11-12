@@ -1,0 +1,154 @@
+```{r}
+# Load libraries
+library(data.table)
+library(socialmixr)
+library(ggplot2)
+
+# Load data
+dt.cont <- as.data.table(polymod$contacts)      # Contacts
+# dt.part.socialmixr <- as.data.table(polymod$participants)  # Participants
+# dt.part.socialmixr <- dt.part.socialmixr[country == "Germany"]
+
+# Use participant data from Neil to include group contacts
+dt.part <- as.data.table(read.csv("~/Imperial/covimod-gp/data/POLYMOD/participant_neil.csv"))
+```
+
+## Preprocessing
+```{r}
+# Select German participants 
+# Select contacts by German participants
+setnames(dt.part, c("global_id", "participant_gender", "participant_age"), c("part_id", "part_gender", "part_age"))
+
+min_part_id <- min(dt.part$part_id)
+max_part_id <- max(dt.part$part_id)
+dt.cont <- dt.cont[part_id >= min_part_id & part_id <= max_part_id]
+
+# Exclude participants with no age information
+dt.part[, part_gender := as.character(part_gender)]
+dt.part[, part_gender := ifelse(part_gender == "", NA, part_gender)]
+dt.part[, part_gender := ifelse(part_gender == "M", "Male", "Female")]
+dt.part <- dt.part[!is.na(part_age) & !is.na(part_gender)]
+
+# Identify contacts with missing age or gender information
+dt.cont[, cnt_gender := as.character(cnt_gender)]
+dt.cont[, cnt_gender := ifelse(cnt_gender == "", NA, cnt_gender)]
+dt.cont[, cnt_gender := ifelse(cnt_gender == "M", "Male", "Female")]
+
+dt.ambi <- dt.cont[is.na(cnt_gender)]
+dt.cont <- dt.cont[!is.na(cnt_gender)]
+
+# Impute exact age with the midpoint between cnt_age_est_min and cnt_age_est_max if it is missing
+dt.cont[is.na(cnt_age_exact), imp_age := round((cnt_age_est_min + cnt_age_est_max) / 2)]
+dt.cont[!is.na(cnt_age_exact), imp_age := cnt_age_exact]
+
+# Rename variables
+setnames(dt.cont, c("imp_age", "cnt_gender"), c("alter_age", "alter_gender"))
+setnames(dt.part, c("part_age", "part_gender"), c("age", "gender"))
+```
+
+## Group contacts
+```{r}
+# Add school contacts and work contacts for each participant
+dt.part[, y_grp := rowSums(.SD, na.rm = T), .SDcols = c("class_size", "work_contacts_nr")]
+
+# Truncate at 60
+dt.grp <- dt.part[,.(age, gender, y_grp)]
+dt.grp[, y_grp := ifelse(y_grp > 60, 60, y_grp)]
+
+# Calculate the total number of group contacts by age and gender
+dt.grp <- dt.grp[, .(y_grp = sum(y_grp)), by = c("age", "gender")]
+```
+
+
+## Make contact data.table
+```{r}
+# Extract relevant columns
+dt.cont <- dt.cont[, .(part_id, alter_age, alter_gender)]
+
+# Merge contact data with participant data
+dt.cont <- merge(dt.cont, dt.part[, .(part_id, age, gender)], by="part_id", all.x = TRUE)
+
+# Count the total number of age- and gender-specific contacts
+dt.cont <- dt.cont[, .(y = .N), by=.(age, gender, alter_age, alter_gender)]
+
+# Make a full grid
+g <- expand.grid(age = 0:84, 
+                 alter_age = 0:84, 
+                 gender = c("Male", "Female"), 
+                 alter_gender = c("Male", "Female"))
+
+# Merge with grid
+dt.cont <- merge(g, dt.cont, all.x = TRUE)
+
+# Fill in true zeros and discard missing combinations
+tmp <- dt.part[, .(N = .N), by=.(age, gender)]
+dt.cont <- as.data.table( merge(dt.cont, tmp, all.x = TRUE) )
+dt.cont[is.na(y) & !is.na(N), y := 0] # True zeros
+dt.cont <- dt.cont[!is.na(y)]
+```
+
+## Make offsets table
+```{r}
+# Merge contact data with participant data
+dt.ambi <- merge(dt.ambi, dt.part[, .(part_id, age, gender)], by = c("part_id"), all.x = TRUE)
+
+# Count the number of contacts with missing age or gender info
+dt.ambi <- dt.ambi[, .(y_ambi = .N), by = .(age, gender)]
+
+# Discard participants with missing age or gender info
+dt.ambi <- dt.ambi[!is.na(age) & !is.na(gender)]
+
+# Calculate the total number complete contact records by age and gender
+dt.comp <- dt.cont[, .(y = sum(y), N = unique(N)), by = .(age, gender)]
+
+# Create offset data.table
+g <- as.data.table( expand.grid(age = 0:84, gender = c("Male", "Female")) )
+dt.offset <- merge(g, dt.comp, all.x = TRUE)
+dt.offset <- merge(dt.offset, dt.ambi, all.x = TRUE)
+dt.offset <- merge(dt.offset, dt.grp, all.x = TRUE)
+
+dt.offset[is.na(y_ambi), y_ambi := 0]
+dt.offset[is.na(y_grp), y_grp := 0]
+dt.offset[is.na(y), y := 0]
+dt.offset[is.na(N), N := 0]
+
+dt.offset[, zeta := y / (y + y_ambi + y_grp)]
+dt.offset[is.nan(zeta), zeta := 1.0]
+
+dt.offset <- dt.offset[, .(age, gender, N, zeta)]
+```
+
+## Create final contact data.table
+```{r}
+dt.cont <- merge(dt.cont, dt.offset[, .(age, gender, zeta)], by = c("age", "gender"), all.x = TRUE)
+dt.cont[is.na(zeta) & !is.na(N), zeta := 1.0]
+dt.cont[, m := y/N/zeta]
+```
+
+## Visualize (Sanity check)
+```{r}
+ggplot(dt.cont, aes(age, alter_age)) + 
+  geom_tile(aes(fill = m)) +
+  labs(x = "Age of participants", y = "Age of contacts", fill = "Intensity") + 
+  scale_x_continuous(limits = c(0 ,84)) + 
+  viridis::scale_fill_viridis(option = "H", limits = c(0, 3)) +
+  facet_grid(alter_gender ~ gender) + 
+  coord_equal(expand = 0) +
+  theme_bw() + 
+  theme(
+    strip.background = element_blank()
+  )
+```
+## Save processed data
+```{r}
+dt.pop <- as.data.table( read.csv("~/Imperial/covimod-gp/data/germany-population-2011.csv") )
+
+polymod <- list(
+  contacts = dt.cont,
+  offsets = dt.offset,
+  population = dt.pop
+)
+
+saveRDS(polymod, "~/Imperial/covimod-gp/data/POLYMOD/polymod.rds")
+```
+

@@ -1,0 +1,106 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+# COVIMOD data check
+The counts below are obtained without excluding any participants nor contacts from the original dataset.
+```{r message=FALSE, warning=FALSE, include=FALSE}
+# Load libraries
+library(tidyverse)
+library(data.table)
+library(ggplot2)
+
+# Helpers
+source("../R/covimod-utility.R")
+source("../R/stan-utility.R")
+```
+
+```{r}
+covimod <- load_covimod_data("~/Imperial/covimod-gp")
+df.part <- covimod$part
+df.nhh <- covimod$nhh
+df.hh <- covimod$hh
+
+# Limit to first 5 waves
+df.part <- filter(df.part, wave <= 5)
+df.nhh <- filter(df.nhh, wave <= 5)
+df.hh <- filter(df.hh, wave <= 5)
+```
+
+## Number of complete contact records
+### Non-household contacts
+
+**Note:** We renamed `age_group` as `alter_age_strata` and `sex` as `alter_gender`. The `load_covimod_data` function in the previous block preprocesses the data such that all entries with "Don't know", "Prefer not to answer" are changed to NA. Hence the number of NA is larger than that of the unprocessed data. See the section on Number of "contacts without age or gender information" for the records we don't count here.
+```{r}
+tlb.nhh <- df.nhh %>% 
+  filter(!(is.na(alter_age_strata) | is.na(alter_gender))) %>% 
+  group_by(wave) %>%
+  summarise(N = n())
+
+tlb.nhh %>% knitr::kable(format = "simple")
+```
+
+### Household contacts
+```{r}
+tlb.hh <- df.hh %>% 
+  group_by(wave) %>% 
+  summarise(N = sum(hh_met_this_day, na.rm = T))
+
+tlb.hh %>% knitr::kable(format = "simple")
+```
+
+## Number of contacts without age or gender information
+```{r}
+tlb.amb <- df.nhh %>% 
+  filter(is.na(alter_age_strata) | is.na(alter_gender)) %>% 
+  group_by(wave) %>%
+  summarise(N = n())
+
+tlb.amb %>% knitr::kable(format = "simple")
+```
+
+## Number of group contacts
+```{r}
+# Columns corresponding to group contacts
+SDcols_Q75 <- c("Q75_u18_work", "Q75_u18_school", "Q75_u18_else", 
+                "Q75_1864_work", "Q75_1864_school", "Q75_1864_else",
+                "Q75_o64_work", "Q75_o64_school", "Q75_o64_else")
+
+# Number of group contacts by wave
+tlb.grp <- df.part %>% 
+  mutate(y_grp = rowSums(across(.cols = all_of(SDcols_Q75)), na.rm = T)) %>% 
+  group_by(wave) %>% 
+  summarise(N = sum(y_grp))
+
+tlb.grp %>% knitr::kable(format = "simple")
+```
+
+## Total observed contact counts
+According to the primary COVIMOD paper, the first wave has 3256 social contacts, the second wave has 4852, the third wave has 6344, and the fourth wave has 13471.
+```{r}
+tbl.tot <- rbind(tlb.nhh, tlb.hh, tlb.grp, tlb.amb)
+tbl.tot %>% 
+  group_by(wave) %>%
+  summarise(N = sum(N)) %>% 
+  knitr::kable(format = "simple")
+```
+
+## Number of participants who were repeatedly sampled
+**Note:** We remove 20 participants without gender or age information
+```{r message=FALSE}
+# Remove participants without gender or age information
+dt.part <- as.data.table(df.part[!is.na(gender) & !is.na(age_strata)])
+
+# The number of times a participant repeatedly participated in the survey
+dt.part[, rep := seq_len(.N), by=.(new_id)]
+dt.part[, rep := rep - 1]
+dt.part[, rep := ifelse(rep > 4, 4, rep)]
+
+dt.part %>% 
+  group_by(wave, rep) %>% 
+  summarise(N = n()) %>% 
+  ungroup(rep) %>% 
+  mutate(pct = round(N / sum(N) * 100, 1)) %>% 
+  knitr::kable(format = "simple")
+```

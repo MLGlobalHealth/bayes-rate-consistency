@@ -1,0 +1,128 @@
+---
+title: "Table 1"
+author: "Shozen Dan"
+date: "2022-07-29"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message=FALSE}
+library(tidyverse)
+library(data.table)
+
+repo.path <- "~/Imperial/covimod-gp"
+```
+
+# Load data
+```{r}
+# Error
+model_eval <- function(data.name, model.name){
+  model.name <- paste(model.name, "*", sep="_")
+  
+  # Error metrics
+  filenames <- Sys.glob(file.path(repo.path, "results", data.name, model.name, "error.rds"))
+  df_error <- rbindlist(lapply(filenames, readRDS))
+  
+  # ELPD LOO
+  filenames <- Sys.glob(file.path(repo.path, "results", data.name, model.name, "LOO.rds"))
+  readLOO <- function(path) { 
+    LOO <- readRDS(path) 
+    data.frame(metric = "elpd", value = LOO$elpd_loo) 
+  }
+  df_elpd <- rbindlist(lapply(filenames, readLOO))
+  
+  # PPC
+  filenames <- Sys.glob(file.path(repo.path, "results", data.name, model.name, "ppc.rds"))
+  readPPC <- function(path) {
+    PPC <- readRDS(path)
+    data.frame(metric = "ppc", value = mean(PPC$inside.CI))
+  }
+  df_ppc <- rbindlist(lapply(filenames, readPPC))
+  
+  df_eval <- rbind(df_error, df_elpd, df_ppc)
+  
+  df_eval %>% 
+    group_by(metric) %>% 
+    summarise(avg = round(mean(value), 7))
+}
+
+# Runtime
+model_runtime <- function(data.name, model.name){
+  model.name <- paste(model.name, "*", sep="_")
+  
+  filenames <- Sys.glob(file.path(repo.path, "results", data.name, model.name, "time_elapsed.rds"))
+  runtimes <- unlist(lapply(filenames, function(x) readRDS(x)$total ))
+  
+  median(runtimes) / 60 / 60
+}
+```
+
+## Model error
+```{r}
+## Comparison between models and parameterisations
+# preCOVID19
+model_eval("preCOVID_2000_COVIMOD", "2dgp-m52-cd")
+model_eval("preCOVID_2000_COVIMOD", "2dgp-m52-rd")
+model_eval("preCOVID_2000_COVIMOD", "hsgp-m52-cd")
+model_eval("preCOVID_2000_COVIMOD", "hsgp-m52-rd")
+
+# inCOVID19
+model_eval("inCOVID_2000_COVIMOD", "2dgp-m52-cd")
+model_eval("inCOVID_2000_COVIMOD", "hsgp-m52-cd")
+model_eval("inCOVID_2000_COVIMOD", "hsgp-m52-rd")
+model_eval("inCOVID_2000_COVIMOD", "2dgp-m52-rd")
+```
+
+```{r}
+## Comparison between different sample sizes
+# preCOVID19
+model_eval("preCOVID_5000_COVIMOD", "hsgp-m52-rd-40-20")
+model_eval("preCOVID_1000_COVIMOD", "hsgp-m52-rd-40-20")
+model_eval("preCOVID_500_COVIMOD", "hsgp-m52-rd-40-20")
+model_eval("preCOVID_250_COVIMOD", "hsgp-m52-rd-40-20")
+
+# inCOVID19
+model_eval("inCOVID_5000_COVIMOD", "hsgp-m52-rd-40-20")
+model_eval("inCOVID_1000_COVIMOD", "hsgp-m52-rd-40-20")
+model_eval("inCOVID_500_COVIMOD", "hsgp-m52-rd-40-20")
+model_eval("inCOVID_250_COVIMOD", "hsgp-m52-rd-40-20")
+```
+
+
+## Model Runtimes
+```{r}
+## Comparison between different parameterisations
+# preCOVID19
+model_runtime("preCOVID_2000_COVIMOD", "2dgp-m52-cd")
+model_runtime("preCOVID_2000_COVIMOD", "hsgp-m52-cd")
+model_runtime("preCOVID_2000_COVIMOD", "hsgp-m52-rd")
+model_runtime("preCOVID_2000_COVIMOD", "2dgp-m52-rd")
+
+# in COVID19
+model_runtime("inCOVID_2000_COVIMOD", "2dgp-m52-cd")
+model_runtime("inCOVID_2000_COVIMOD", "hsgp-m52-cd")
+model_runtime("inCOVID_2000_COVIMOD", "2dgp-m52-rd")
+model_runtime("inCOVID_2000_COVIMOD", "hsgp-m52-rd")
+```
+
+```{r}
+## Comparison between different sample sizes
+# preCOVID19
+model_runtime("preCOVID_5000_COVIMOD", "hsgp-m52-rd-40-20")
+model_runtime("preCOVID_1000_COVIMOD", "hsgp-m52-rd-40-20")
+model_runtime("preCOVID_500_COVIMOD", "hsgp-m52-rd-40-20")
+model_runtime("preCOVID_250_COVIMOD", "hsgp-m52-rd-40-20")
+
+# in COVID19
+model_runtime("inCOVID_5000_COVIMOD", "hsgp-m52-rd-40-20")
+model_runtime("inCOVID_1000_COVIMOD", "hsgp-m52-rd-40-20")
+model_runtime("inCOVID_500_COVIMOD", "hsgp-m52-rd-40-20")
+model_runtime("inCOVID_250_COVIMOD", "hsgp-m52-rd-40-20")
+```
+
+
+
+

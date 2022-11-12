@@ -1,0 +1,63 @@
+---
+title: "Table 1"
+author: "Shozen Dan"
+date: "2022-07-29"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Setup
+```{r message=FALSE}
+library(tidyverse)
+library(data.table)
+
+# Load data
+repo.path <- "~/Imperial/covimod-gp"
+dt <- readRDS(file.path(repo.path, "results/hsgp-m52-lrd-5", "intensity_marginal_a.rds"))
+```
+## Visual Check
+```{r}
+# Sanity check
+ggplot(dt[wave > 1], aes(age, relchng_M)) + 
+  geom_line(aes(color = gender)) + 
+  geom_ribbon(aes(ymin = relchng_CL, ymax = relchng_CU, fill = gender), alpha = 0.5) +
+  ggsci::scale_fill_nejm() + 
+  ggsci::scale_color_nejm() + 
+  scale_y_continuous(labels = scales::percent_format()) + 
+  scale_x_continuous(expand = c(0, 0)) + 
+  labs(x = "Age of contacting individuals", y = "Relative % change from wave 1",
+       color = "Gender", fill = "Gender") + 
+  facet_grid(~paste("Wave", wave)) + 
+  theme_bw() + 
+  theme(
+    legend.position = "bottom",
+    legend.margin = margin(t = -2, unit = "pt"),
+    strip.background = element_blank()
+  )
+```
+```{r}
+setkey(dt, wave, gender, age_strata)
+dt.int <- dt[, lapply(.SD, round, 2), 
+             by = .(wave, gender, age_strata),
+             .SDcols = c("intensity_M", "intensity_CL", "intensity_CU")]
+dt.int <- dcast(dt.int, gender + age_strata ~ wave, value.var = c("intensity_M", "intensity_CL", "intensity_CU"))
+
+dt.pct <- dt[wave > 1, lapply(.SD, function(x){round(x * 100)}), 
+             by = .(wave, gender, age_strata),
+             .SDcols = c("relchng_M", "relchng_CL", "relchng_CU")]
+dt.pct <- dcast(dt.pct, gender + age_strata ~ wave, value.var = c("relchng_M", "relchng_CL", "relchng_CU"))
+
+dt <- cbind(dt.int, dt.pct[, !(gender:age_strata)])
+
+# Export for further edits in Excel
+write.csv(dt, file = "../tables/table-2.csv")
+```
+
+
+
+
+
+

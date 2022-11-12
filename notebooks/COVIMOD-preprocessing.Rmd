@@ -1,0 +1,206 @@
+---
+title: "COVIMOD Preprocessing"
+author: "Shozen Dan"
+date: '2022-07-16'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message=FALSE}
+library(data.table)
+library(stringr)
+library(ggplot2)
+library(pammtools)
+
+source("../R/covimod-utility.R")
+source("../R/stan-utility.R")
+```
+
+## Setup
+```{r}
+covimod <- load_covimod_data("~/Imperial/covimod-gp")
+dt.part <- covimod$part
+dt.nhh <- covimod$nhh
+dt.hh <- covimod$hh
+
+# Limit to first 5 waves
+dt.part <- dt.part[wave <= 5]
+dt.nhh <- dt.nhh[wave <= 5]
+dt.hh <- dt.hh[wave <= 5]
+```
+
+## Participant data
+```{r}
+# Remove participants with missing age-strata or gender information
+dt.part <- dt.part[!is.na(gender) & !is.na(age_strata)]
+
+# The number of times a participant repeatedly participated in the survey
+dt.part[, rep := seq_len(.N), by=.(new_id)]
+dt.part[, rep := rep - 1]
+dt.part[, rep := ifelse(rep > 4, 4, rep)]
+
+# Impute children age by sampling from uniform distribution
+dt.part <- impute_child_age(dt.part, seed=1527)
+
+# Create a new index U which is a combined index of wave and rep
+dt.part[, u := fcase(wave == 1, 1, 
+                     wave == 2, 2 + rep,
+                     wave >= 3, 1/2*(wave-1)*(wave)+rep+1)]
+
+dt.part <- dt.part[u != 11]
+
+# Missing Us
+u.unique <- sort(unique(dt.part$u))
+u.full <- seq(1, max(u.unique))
+u.missing <- u.full[!(u.full %in% u.unique)]
+
+print(u.missing)
+# Note: We would probably need to pool waves when we do full analysis as there is too much
+```
+
+## Non-household contacts
+### Ambiguous contacts
+```{r}
+# Identify contacts with missing age and gender
+dt.amb <- dt.nhh[is.na(alter_age_strata) | is.na(alter_gender)]
+
+# Append participant info
+dt.amb <- merge(dt.amb[,.(new_id, wave)], dt.part, by=c("new_id", "wave"), all.x = TRUE)
+
+# Treat all as missing (some have either gender or age-strata info)
+dt.amb <- dt.amb[, list(y_amb = .N), by=c("new_id", "u")]
+
+hist(dt.amb$y_amb) # Quick visualization
+
+# Truncate at 30 (to remove extreme cases where people reported 30+ contacts)
+dt.amb <- merge(dt.amb, dt.part, by=c("new_id", "u"), all.x = TRUE)
+
+# Remove ambiguous contacts from original nhh data
+dt.nhh <- dt.nhh[!(is.na(alter_age_strata) | is.na(alter_gender))]
+```
+
+### Group contacts
+```{r}
+SDcols_Q75 <- c("Q75_u18_work", "Q75_u18_school", "Q75_u18_else", 
+                "Q75_1864_work", "Q75_1864_school", "Q75_1864_else",
+                "Q75_o64_work", "Q75_o64_school", "Q75_o64_else")
+
+dt.part[, y_grp := rowSums(.SD, na.rm = T), .SDcols = SDcols_Q75]
+dt.part[y_grp > 60, y_grp := 60]
+
+dt.grp <- dt.part[, .(y = sum(y_grp)), by=.(wave, imp_age, gender)]
+setnames(dt.grp, "imp_age", "age")
+```
+
+## Combine household and non-household data
+```{r}
+setnames(dt.hh, "hh_met_this_day", "y")
+dt.hh$type <- "hh"
+
+dt.nhh$y <- 1
+dt.nhh$type <- "nhh"
+
+# Combine household and non-household contacts
+dt.cmb <- rbind(dt.nhh[,.(new_id, wave, type, alter_age_strata, alter_gender, y)], 
+                dt.hh[,.(new_id, wave, type, alter_age_strata, alter_gender, y)])
+
+dt.cmb$type <- factor(dt.cmb$type, levels=c("hh", "nhh"))
+dt.cmb <- dt.cmb[order(wave, new_id),]
+
+# Merge with participant data
+dt.cmb <- merge(dt.cmb, dt.part, by=c("new_id", "wave"), all.x = TRUE)
+
+# Sanity check
+sum(dt.cmb$y, na.rm = T) + sum(dt.amb$y_amb) + sum(dt.grp$y)
+```
+
+## Aggregate contacts
+```{r}
+# Participant size by wave and repetition
+dt.part.size <- dt.part[, .(N = .N), by=.(u, wave, rep, imp_age, gender)]
+setnames(dt.part.size, "imp_age", "age")
+
+# Aggregate age-gender-specific contacts
+dt.cmb.agg <- dt.cmb[, .(y = sum(y, na.rm=T)), by=.(u, wave, rep, imp_age, gender, alter_age_strata, alter_gender)]
+setnames(dt.cmb.agg, "imp_age", "age")
+
+# Aggregate ambiguous contacts
+dt.amb.agg <- dt.amb[, .(y_amb = sum(y_amb, na.rm=T)), by=.(wave, imp_age, gender)]
+setnames(dt.amb.agg, c("imp_age", "y_amb"), c("age", "y"))
+
+# Total number of contacts (specific + ambiguous + group)
+dt.cmb.agg.margin <- dt.cmb.agg[,.(y = sum(y, na.rm=T)), by=.(wave, age, gender)]
+dt.tot <- rbind(dt.cmb.agg.margin, dt.amb.agg, dt.grp)
+dt.tot <- dt.tot[,.(y = sum(y, na.rm=T)), by=.(wave, age, gender)]
+setnames(dt.tot, "y", "y_tot")
+
+# Calculate zeta term
+dt.amb.agg.margin <- merge(dt.cmb.agg.margin, dt.tot, by=c("wave", "age","gender"), all.x=TRUE)
+dt.amb.agg.margin[, zeta := y/y_tot]
+dt.amb.agg.margin[, zeta := ifelse(is.nan(zeta), 1, zeta)]
+
+# Offset terms
+dt.offsets <- merge(dt.part.size, dt.amb.agg.margin[,.(wave, age, gender, zeta)], 
+                    by=c("wave","age","gender"), all.x = T)
+dt.offsets[is.na(zeta), zeta := 1]
+
+dt.tot[, .(y = sum(y_tot)), by=.(wave)]
+```
+
+```{r}
+# Remove participants and contacts 85+
+dt.cmb.agg <- dt.cmb.agg[!(age > 84 | alter_age_strata == "85+")]
+dt.offsets <- dt.offsets[!(age > 84)]
+
+# Remove remaining NAs
+dt.cmb.agg <- dt.cmb.agg[!is.na(alter_gender)]
+```
+
+```{r}
+g <- make_grid(85, 15, gender = TRUE)
+d <- merge(g, dt.cmb.agg, by=c("u", "age", "gender", "alter_age_strata", "alter_gender"), all.x = TRUE)
+d <- merge(d, dt.offsets[, .(u, age, gender, N, zeta)], by = c("u", "age", "gender"), all.x = TRUE)
+
+# Impute true zeroes
+d <- d[!is.na(N)]
+d <- d[is.na(y), y := 0]
+
+# Recover wave and rep
+d[, wave := fcase(u == 1, 1, 
+                  u <= 3, 2,
+                  u <= 6, 3,
+                  u <= 10, 4,
+                  u <= 15, 5)]
+
+d[, rep := fcase(wave == 1, 0, 
+                 wave == 2, u - wave,
+                 wave >= 3, u - 1/2*(wave-1)*(wave)-1)]
+```
+
+
+## Data check
+```{r}
+tmp <- d[, m := y/N]
+ggplot(tmp[u == 1], aes(age, alter_age_strata)) + 
+  geom_tile(aes(fill = m)) + 
+  facet_grid(gender ~ alter_gender) + 
+  viridis::scale_fill_viridis(option='H') +
+  theme_bw() + 
+  theme(aspect.ratio = 1)
+```
+## Export data
+```{r}
+covimod.processed <- list(
+  u.missing = u.missing,
+  contacts = d,
+  offsets = dt.offsets,
+  pop = covimod$pop
+)
+
+saveRDS(covimod.processed, file="../data/COVIMOD/COVIMOD-multi.rds")
+```
+
+

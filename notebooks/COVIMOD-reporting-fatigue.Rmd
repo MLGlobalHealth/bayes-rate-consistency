@@ -1,0 +1,114 @@
+---
+title: "Reporting Fatigue"
+author: "Shozen Dan"
+date: '2022-07-12'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Setup
+```{r message=FALSE}
+library(dplyr)
+library(data.table)
+library(MASS)
+library(ggplot2)
+source("~/Imperial/covimod-gp/R/covimod-utility.R")
+
+covimod_data <- read_rds("~/Imperial/covimod-gp/data/COVIMOD/COVIMOD-multi.rds")
+dt.cnt <- covimod_data$contacts
+```
+
+## Preprocess
+```{r}
+# Sum over age, wave, and repeat
+dt.cnt <- dt.cnt[, .(y = sum(y), N = sum(N)), by=.(wave, rep, alter_age_strata)]
+setnames(dt.cnt, "alter_age_strata", "age_strata")
+dt.cnt$wave <- factor(dt.cnt$wave)
+dt.cnt$rep <- factor(dt.cnt$rep)
+
+# Obtain population estimates
+dt.pop <- covimod_data$pop
+dt.pop <- age_stratify(dt.pop)
+dt.pop <- dt.pop[, .(P = sum(pop)), by=.(age_strata)]
+
+dt.cnt <- merge(dt.cnt, dt.pop, by=c("age_strata"), all.x = TRUE)
+```
+
+## A basic Poisson model
+$$
+\begin{split}
+Y_{trc} & \sim \text{Poisson}(\lambda_{trc}) \\
+\log(\lambda_{trc}) &= \beta_0 + \beta_c + \beta_{tc} + \tau_{t} + \rho_r + \log N_{trc} + \log P_{c} 
+\end{split}
+$$
+
+```{r}
+m.pois <- glm(y ~ wave*age_strata + rep + offset(log(N)) + offset(log(P)),  
+              data = dt.cnt, 
+              family = poisson(link="log"))
+
+m.pois.su <- summary(m.pois)
+
+# Extract estimates
+df.pois <- broom::tidy(m.pois) %>% filter(str_detect(term, "rep[0-9]{1,2}"))
+df.pois <- df.pois %>% mutate(
+  term = case_when(term == "rep1" ~ "rho[1]",
+                   term == "rep2" ~ "rho[2]",
+                   term == "rep3" ~ "rho[3]",
+                   term == "rep4" ~ "rho[4]")
+)
+df.pois$model <- "Poisson"
+```
+
+## Negative Binomial model
+$$
+\begin{split}
+Y_{trc} & \sim \text{NegBinomial}(\mu_{trc}, \nu) \\
+\log(\mu_{trc}) &= \beta_0 + \beta_c + \beta_{tc} + \tau_{t} + \rho_r + \log N_{trc} + \log P_{c} 
+\end{split}
+$$
+```{r}
+m.nb <- glm.nb(y ~ wave*age_strata + rep + offset(log(N)) + offset(log(P)), 
+               data = dt.cnt, link=log)
+m.nb.su <- summary(m.nb)
+
+df.nb <- broom::tidy(m.nb) %>% filter(str_detect(term, "rep[0-9]{1,2}"))
+df.nb <- df.nb %>% mutate(
+  term = case_when(term == "rep1" ~ "rho[1]",
+                   term == "rep2" ~ "rho[2]",
+                   term == "rep3" ~ "rho[3]",
+                   term == "rep4" ~ "rho[4]")
+)
+df.nb$model <- "NegBinomial"
+```
+
+## Repeat effects
+```{r}
+df <- rbind(df.nb, df.pois)
+
+# A quick visual
+ggplot(df, aes(x = term, y = estimate, color=model)) + 
+  geom_pointrange(aes(ymin = estimate - std.error*1.96, 
+                      ymax = estimate + std.error*1.96),
+                  position = position_dodge(width=0.3)) + 
+  scale_x_discrete(labels = scales::label_parse()) +
+  scale_color_manual(values = c("#0D353F", "#017979")) + 
+  labs(y = "", x = expression(rho), color = "") + 
+  theme_bw() + 
+  theme(
+    axis.text = element_text(size = 8),
+    axis.title = element_text(size = 8),
+    legend.text = element_text(size = 8),
+    legend.title = element_text(size = 8),
+    legend.position = c(0.22, 0.15),
+    legend.direction = "horizontal",
+    legend.key = element_rect(fill = "transparent"),
+    legend.background = element_rect(fill = "transparent")
+  )
+
+ggsave("~/Imperial/covimod-gp/thesis/figures/reporting-fatigue.pdf",
+       units = "cm", width = 12, height = 5, dpi = 300)
+```

@@ -1,0 +1,40 @@
+---
+title: "Postprocessing"
+author: "Shozen Dan"
+date: '2022-07-18'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Setup
+```{r}
+library(data.table)
+library(cmdstanr)
+library(posterior)
+library(bayesplot)
+library(pammtools)
+
+source("../R/covimod-utility.R")
+source("../R/stan-utility.R")
+source("../R/postprocess-diagnostic.R")
+
+data <- readRDS("../data/COVIMOD/COVIMOD-processed.rds")
+```
+
+```{r}
+# Load fit
+fit <- readRDS("../stan_fits/lrd-hsgp_2.rds")
+
+# Make convergence diagnostics (Too heavy to run)
+# res <- make_convergence_diagnostic_stats(fit) 
+```
+
+## Posterior predictive checks
+```{r}
+po <- fit$draws("yhat_strata")
+make_ppd_check(po, data$contacts[wave <= 2], data$offsets[wave <= 2])
+```
+
