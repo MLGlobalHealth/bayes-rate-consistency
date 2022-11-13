@@ -1,10 +1,8 @@
-functions
-{
+functions {
 #include gp-functions.stan
 }
 
-data
-{
+data {
   int<lower=1> U;       // Survey wave x repeated response
   int<lower=1> T;       // Survey wave
   int<lower=1> R;       // Repeated reports
@@ -51,8 +49,7 @@ data
   int<lower=1> M2;     // number of basis functions
 }
 
-transformed data
-{
+transformed data {
   int N = N_M + N_F + N_M + N_F;
   int MM = 1, FF = 2, MF = 3, FM = 4; // gender indexes
   int G = 4;                          // gender combinations
@@ -85,8 +82,7 @@ transformed data
   );
 }
 
-parameters
-{
+parameters {
   vector[G] beta_0; // contact rate baseline
   vector[T-1] tau; // time effect
   vector[R-1] rho; // repeated response effect
@@ -100,8 +96,7 @@ parameters
   array[T] matrix[(G-1)*M1, M2] z; // HSGP basis function coefficients
 }
 
-transformed parameters
-{
+transformed parameters {
   matrix<lower=0>[T, G-1] gp_sigma = tan(gp_sigma_unif); // Reparametrize Half-Cauchy for stability
 
   array[T, G] matrix[A, A] log_cnt_rate; // Expose for easy access
@@ -167,8 +162,7 @@ transformed parameters
   }
 }
 
-model
-{
+model {
   // Additive linear parameters
   target += normal_lpdf(beta_0 | 0, 10); // Baseline contact rate
   target += normal_lpdf(tau | 0, 1);  // Survey wave
@@ -200,8 +194,7 @@ model
   }
 }
 
-generated quantities
-{
+generated quantities {
   // Predicted coarse-strata contacts
   array[N] int yhat_strata;
 
