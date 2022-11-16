@@ -1,0 +1,198 @@
+---
+title: 'Tutorial: Simulation experiments'
+author: "Shozen Dan"
+date: "2022-11-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This notebook describes how to generate simulated social contact data and how to run the cross-sectional version of the bayes-rate-consistency model. Stan model codes are available under the `stan_models` directory.
+
+#### Load packages
+```{r message = FALSE, warning = FALSE}
+library(data.table)
+library(stringr)
+library(cmdstanr)
+library(posterior)
+library(bayesplot)
+library(ggplot2)
+library(patchwork)
+library(viridis)
+```
+
+#### Load helper functions
+```{r}
+REPO_PATH <- "~/bayes-rate-consistency" # You may need to change this path
+source(file.path(REPO_PATH, "R", "sim-intensity-utility.R")) # Generating 
+source(file.path(REPO_PATH, "R", "sim-dataset-utility.R"))   # Generating simulated datasets
+source(file.path(REPO_PATH, "R", "sim-stan-utility.R"))      # Configuring Stan inputs
+```
+
+```{r}
+theme_set(theme_bw())
+```
+
+## Load and plot the simulated intensities
+Load simulated contact intensity patterns
+```{r}
+# Pre-COVID simulations
+dt.preCOVID <- as.data.table(readRDS(file.path(REPO_PATH, "data/simulations/intensity/preCOVID/data.rds")))
+# In-COVID simulations
+dt.inCOVID <- as.data.table(readRDS(file.path(REPO_PATH, "data/simulations/intensity/inCOVID/data.rds")))
+# Load German population data
+dpop <- as.data.table(read.csv(file.path(REPO_PATH, "data/germany-population-2011.csv")))
+```
+
+Plot the simulated contact intensity patterns
+```{r}
+plt.preCOVID <- ggplot(dt.preCOVID, aes(age, alter_age)) + 
+  geom_tile(aes(fill = cntct_intensity)) + 
+  scale_fill_viridis(option = "H", limits = c(0, 1.3)) + 
+  coord_equal(expand = 0) + 
+  labs(title = "Pre-COVID19 Scenario",
+       x = "Contacting individuals' age", 
+       y = "Contacted individuals' age",
+       fill = "Intensity")
+
+plt.inCOVID <- ggplot(dt.inCOVID, aes(age, alter_age)) + 
+  geom_tile(aes(fill = cntct_intensity)) + 
+  scale_fill_viridis(option = "H", limits = c(0, 1.3)) + 
+  coord_equal(expand = 0) + 
+  labs(title = "in-COVID19 Scenario",
+       x = "Contacting individuals' age", 
+       y = "Contacted individuals' age",
+       fill = "Intensity")
+
+plt.preCOVID + plt.inCOVID + plot_layout(guides = "collect")
+```
+
+## Simulate social contact data based on intensities
+To simulate the data found in web-based social contact surveys such as CoMix or COVIMOD, we begin by stratifying the contacts age group into broad age categories (or strata). The ```stratify_alter_age()``` function takes the simulated intensity data as the first argument and a specification for the stratification scheme as the second argument. Currently, the available options are 3yr, 5yr, CoMix, and COVIMOD. In this example, we will use the COVIMOD stratification scheme to stratify the pre-COVID data. 
+```{r}
+STRATA <- "COVIMOD"
+
+dt <- stratify_alter_age(dt.preCOVID, STRATA)
+```
+
+Next we need to specify the number of participants who participates in the social contact study. Here, we set it to 2000.
+```{r}
+N <- 2000
+```
+
+We assume that the survey is representative of the population and distribute the 2000 participants to each age group such that it resembles the general population.
+```{r}
+# Proportion of each age in population
+dpop[, weight := pop/sum(pop)]
+
+# Participant size for each age
+dpop[, part := round(weight*N)]
+
+# Merge with intensity data with population data
+dt <- merge(dt, dpop[, list(age, gender, part)], by=c("age", "gender"))
+```
+
+The true social contact counts for participant of age $a$ to individuals of age $b$ may then be obtain by
+$$
+Y_{ab}^{\text{True}, gh} = m_{ab}^{gh} N_a^g
+$$
+where $m_{ab}$ denotes the contact intensity from age $a$ gender $g$ to age $b$ gender $h$ and $N_a$ denote the participant size for age $a$ gender $g$.
+
+```{r}
+dt[, y_true := round(cntct_intensity*part)]
+```
+
+We obtain random samples social contact counts by sampling from a Poisson distribution with mean $Y_{ac}^{\text{True},gh}$.
+$$
+Y_{ab}^{\text{Sim}} \sim \text{Poisson}(Y_{ab}^{\text{True},gh})
+$$
+Note: We chose not sample from a Negative Binomial distribution to avoid having to specify an additional scale parameter.
+
+We then aggregate the counts by gender and age strata, i.e.
+$$
+Y_{ac}^{\text{Sim},gh} = \sum_{c \in \mathcal{C}} Y_{ab}^{\text{Sim},gh}
+$$
+
+```{r}
+set.seed(123)
+
+# Sample from a Poisson random generator
+dt[, y := rpois(nrow(dt), lambda=dt$y_true)]
+
+# Stratify contact intensities and contact rates
+group_var <- c("age", "gender", "alter_age_strata", "alter_gender")
+dt[, y_strata := sum(y), by=group_var]
+dt[, cntct_intensity_strata := sum(cntct_intensity), by=group_var]
+dt[, pop_strata := sum(pop), by=group_var]
+```
+
+Plot the simulated contact counts
+```{r}
+ggplot(dt, aes(age, alter_age_strata)) + 
+  geom_tile(aes(fill = y_strata)) + 
+  scale_fill_viridis(option = "F") + 
+  scale_x_continuous(expand = c(0,0)) + 
+  scale_y_discrete(expand = c(0,0)) + 
+  labs(x = "Age of participants", y = "Age of contacts", fill = "Counts") + 
+  theme(aspect.ratio = 1)
+```
+## Running Stan models
+```{r}
+# Make Stan data
+MODEL_NAME <- "hsgp-m52-rd" # Specify the model to run
+
+stan_data <- init_stan_data(strata = STRATA)
+stan_data <- add_N(stan_data, dt)
+stan_data <- add_contacts(stan_data, dt)
+stan_data <- add_row_major_idx(stan_data, dt)
+stan_data <- add_partsize_offsets(stan_data, dt)
+stan_data <- add_group_offsets(stan_data)
+stan_data <- add_pop_offsets(stan_data, dt)
+stan_data <- add_map_age_to_strata(stan_data, strata = STRATA)
+stan_data <- add_std_age_idx(stan_data)
+
+if (stringr::str_detect(MODEL_NAME, "rd")){
+  stan_data <- add_nn_idx(stan_data)
+}
+```
+
+If we want to run the HSGP model, we need to specify additional hyper parameters, namely the boundary inflation factors and the number of basis function to use in each dimension.
+```{r}
+# Specifying HSGP parameters
+C <- 1.5
+M1 <- 30
+M2 <- 20
+if (stringr::str_detect(MODEL_NAME, "hsgp")){
+  stan_data <- add_hsgp_parms(stan_data, C, M1, M2)
+}
+```
+
+Compile the Stan model. (You may need to run ```rebuild_cmdstan()``` beforehand).
+```{r}
+# Compile the Stan model
+model.path <- paste0(file.path(REPO_PATH, "stan_models", MODEL_NAME), ".stan")
+model <- cmdstanr::cmdstan_model(model.path, compile = TRUE)
+```
+
+Fit the Stan model (This may up to an hour)
+```{r message=FALSE}
+# Run stan model
+# WARNING: This may take some time and memory
+fit <- model$sample(
+  data = stan_data,
+  chains = 4,
+  seed = 123,
+  iter_warmup = 500,
+  iter_sampling = 1000,
+  parallel_chains = 4,
+  max_treedepth = 13,
+  refresh = 50
+)
+```
+
+
+
+
+
