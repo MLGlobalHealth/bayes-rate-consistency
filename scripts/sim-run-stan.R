@@ -39,6 +39,9 @@ option_list <- list(
   optparse::make_option("--data", type = "character", default = NA_character_,
                         help = "Name of the data directory under data/simulations/datasets/",
                         dest = "data"),
+  optparse::make_option("--out_path", type = "character", default = "rds/general/user/sd121/home/covimod-gp",
+                        help = "path to the directory in which to output the data",
+                        dest = "out.path"),
   optparse::make_option("--idx", type = "integer", default = NA_integer_,
                         help = "PBD_JOB_IDX",
                         dest = "idx")
@@ -46,12 +49,6 @@ option_list <- list(
 
 args <- optparse::parse_args(optparse::OptionParser(option_list = option_list))
 args$strata <- str_split(args$data, "_")[[1]][3]
-
-#args$repo.path <- "~/Imperial/covimod-gp"
-#args$model <- "cd-hsgp"
-#args$data <- "inCOVID_2000_5yr"
-#args$idx <- 1
-
 
 ##### ---------- Error handling ---------- #####
 if (is.na(args$repo.path)) {
@@ -92,16 +89,6 @@ if (stringr::str_detect(args$model, "hsgp")){
   stan_data <- add_hsgp_parms(stan_data, args$hsgp_binf, args$hsgp_m1, args$hsgp_m2)
 }
 
-##### ---------- Set initial values ---------- #####
-set_inits <- function(){
-  set.seed(args$seed)
-  beta_0 <- dt[, floor(mean(y_strata / part - log(pop_strata)))]
-
-  list(
-    beta_0 = beta_0 + rnorm(4, 0, 0.2)
-  )
-}
-
 ##### ---------- Running Stan models ---------- #####
 cat(" Compiling Stan model ...\n")
 model.path <- paste0(file.path(args$repo.path, "stan_models", args$model), ".stan")
@@ -116,11 +103,10 @@ fit <- model$sample(
   iter_sampling = args$iter_sampling,
   parallel_chains = args$chains,
   max_treedepth = 13
-  # init = set_inits
 )
 
 # Export path
-export.path <- file.path(args$repo.path, "stan_fits", args$data)
+export.path <- file.path(args$out.path, "stan_fits", args$data)
 if (!file.exists(export.path)) {
   cat(paste("\n Making export directory:", export.path))
   dir.create(export.path)

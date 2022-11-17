@@ -17,6 +17,9 @@ option_list <- list(
   optparse::make_option("--repo_path", type = "character", default = "/rds/general/user/sd121/home/covimod-gp",
                         help = "Absolute file path to repository directory [default]",
                         dest = 'repo.path'),
+  optparse::make_option("--out_path", type = "character", default = "rds/general/user/sd121/home/covimod-gp",
+                        help = "The absolute file path to where the stan fits are saved",
+                        dest = "out.path"),
   optparse::make_option("--model", type = "character", default = NA_character_,
                         help = "Name of the model",
                         dest = "model"),
@@ -30,7 +33,7 @@ option_list <- list(
 
 args <- optparse::parse_args(optparse::OptionParser(option_list = option_list))
 
-model.path <- file.path(args$repo.path, "stan_fits", args$data, paste0(args$model, "_", args$idx, ".rds"))
+model.path <- file.path(args$out.path, "stan_fits", args$data, paste0(args$model, "_", args$idx, ".rds"))
 data.path <- file.path(args$repo.path, "data/simulations/datasets", args$data, paste0("data_", args$idx, ".rds"))
 
 # Error handling
@@ -43,7 +46,7 @@ if(!file.exists(data.path)) {
 }
 
 # Output directories
-export.path <- file.path(args$repo.path, "results", args$data, paste(args$model, args$idx, sep="_"))
+export.path <- file.path(args$out.path, "results", args$data, paste(args$model, args$idx, sep="_"))
 export.fig.path <- file.path(export.path, "figures")
 if(!dir.exists(export.path)){
   dir.create(export.path, recursive = TRUE)
