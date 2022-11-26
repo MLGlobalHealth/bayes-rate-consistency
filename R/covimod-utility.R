@@ -1,7 +1,5 @@
 # Helper functions for working with COVIMOD data
 
-# TODO: Consider group contacts
-
 load_covimod_data <- function(path){
   covimod.path <- file.path(path, "data/COVIMOD/COVIMOD_data_2022-10-17.RData")
   load(covimod.path)
@@ -23,7 +21,7 @@ load_covimod_data <- function(path){
   dt.nhh <- process_age_gender_labels(dt.nhh)
 
   # Change column names
-  setnames(dt.part, c("wave_0", "age_0", "sex", "age_group"), c("wave", "age", "gender", "age_strata"))
+  setnames(dt.part, c("wave_0", "age_0", "sex", "age_group", "kreis_0"), c("wave", "age", "gender", "age_strata", "district"))
   setnames(dt.hh, old = c("age_group", "sex"), new = c("alter_age_strata", "alter_gender"))
   setnames(dt.nhh, old = c("age_group", "sex"), new = c("alter_age_strata", "alter_gender"))
 
