@@ -177,7 +177,7 @@ model <- cmdstanr::cmdstan_model(model.path, compile = TRUE)
 ```
 
 Fit the Stan model (This may up to an hour)
-```{r message=FALSE}
+```{r}
 # Run stan model
 # WARNING: This may take some time and memory
 fit <- model$sample(
@@ -188,7 +188,7 @@ fit <- model$sample(
   iter_sampling = 1000,
   parallel_chains = 4,
   max_treedepth = 13,
-  refresh = 50
+  refresh = 10
 )
 ```
 

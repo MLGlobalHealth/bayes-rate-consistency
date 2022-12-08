@@ -1,7 +1,5 @@
 # Bayesian Rate Consistency Model
 
-### for estimating high resolution human social contact patterns
-
 ## About this repository
 
 This repository contains the code for the paper: *Estimating fine age structure and time trends in human contact patterns from coarse contact data: the Bayesian rate consistency model.* <https://arxiv.org/abs/2210.11358>
@@ -33,7 +31,7 @@ renv::activate("path/to/repository")
 To install all required libraries, execute
 
 ```{r}
-renv::init
+renv::init()
 renv::restore()
 ```
 

@@ -1,0 +1,69 @@
+
+```{r message=FALSE}
+library(data.table)
+library(stringr)
+library(ggplot2)
+library(ggmap)
+library(maps)
+
+# Load utility functions
+source('~/bayes-rate-consistency/R/covimod-utility.R')
+
+# Set ggplot theme
+theme_set(theme_bw())
+```
+
+```{r}
+# Load the COVIMOD data
+covimod <- load_covimod_data("~/bayes-rate-consistency")
+dt.part <- covimod$part
+```
+
+```{r}
+params <- list(
+  WAVE = 1
+)
+```
+
+
+The number of unique districts sampled in the first wave
+```{r}
+dt.part <- dt.part[wave == params["WAVE"]]
+length(unique(dt.part$district))
+```
+
+Distribution of sample size
+```{r}
+N.district <- dt.part[, .(N = .N), by=.(district)]
+ggplot(N.district, aes(x = N)) + 
+  geom_histogram(binwidth = 2) + 
+  scale_x_continuous(breaks = seq(0,70,2)) + 
+  labs(x = "No. of Samples", y="") + 
+  theme()
+```
+```{r}
+# Number of samples by urban & rural
+dt.part[, urban := ifelse(str_detect(district, "Stadt"), TRUE, FALSE)]
+dt.part[, .(N = .N), by=.(urban)]
+```
+
+### Number of contacts by Urban / Rural
+```{r}
+dt.part[is.na(urban)]
+```
+
+
+```{r}
+dt.hh <- covimod$hh[wave == params["WAVE"]]
+dt.hh <- merge(dt.hh, dt.part, by=c("new_id", "wave"), all.x = TRUE)
+
+dt.hh[hh_met_this_day == 1, .(N = .N), by=.(urban)]
+```
+
+```{r}
+dt.nhh <- covimod$nhh[wave == params["WAVE"]]
+dt.nhh <- merge(dt.nhh, dt.part, all.x = TRUE)
+
+dt.nhh[, .(N = .N), by=.(urban)]
+```
+
