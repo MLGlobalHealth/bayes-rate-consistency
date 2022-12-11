@@ -1,0 +1,635 @@
+district,new_id,form,state,capital
+Altenkirchen (Westerwald),0a32af2d,NA,NA,NA
+Altenkirchen (Westerwald),0db8c232,NA,NA,NA
+Altenkirchen (Westerwald),f5d4c4cb,NA,NA,NA
+Amberg,2652fd18,NA,NA,NA
+Amberg,90fc3a44,NA,NA,NA
+"Berlin, Stadt",0078bc6d,NA,NA,NA
+"Berlin, Stadt",06e57e81,NA,NA,NA
+"Berlin, Stadt",1b93753c,NA,NA,NA
+"Berlin, Stadt",22f940a2,NA,NA,NA
+"Berlin, Stadt",27f0bdb2,NA,NA,NA
+"Berlin, Stadt",32803348,NA,NA,NA
+"Berlin, Stadt",3285da7d,NA,NA,NA
+"Berlin, Stadt",328eeed8,NA,NA,NA
+"Berlin, Stadt",343a5457,NA,NA,NA
+"Berlin, Stadt",35dc6d85,NA,NA,NA
+"Berlin, Stadt",36c49feb,NA,NA,NA
+"Berlin, Stadt",3b56f769,NA,NA,NA
+"Berlin, Stadt",3decf2ca,NA,NA,NA
+"Berlin, Stadt",41773860,NA,NA,NA
+"Berlin, Stadt",42fe0fd4,NA,NA,NA
+"Berlin, Stadt",467f1252,NA,NA,NA
+"Berlin, Stadt",489d0e97,NA,NA,NA
+"Berlin, Stadt",5006e2ea,NA,NA,NA
+"Berlin, Stadt",522fa9e7,NA,NA,NA
+"Berlin, Stadt",52e9cbfb,NA,NA,NA
+"Berlin, Stadt",5c9a2176,NA,NA,NA
+"Berlin, Stadt",5e3cff86,NA,NA,NA
+"Berlin, Stadt",633a5af1,NA,NA,NA
+"Berlin, Stadt",64ddef46,NA,NA,NA
+"Berlin, Stadt",669f4d53,NA,NA,NA
+"Berlin, Stadt",6758ceeb,NA,NA,NA
+"Berlin, Stadt",6af6845a,NA,NA,NA
+"Berlin, Stadt",6b4bedeb,NA,NA,NA
+"Berlin, Stadt",6da77c2b,NA,NA,NA
+"Berlin, Stadt",74e4dc9e,NA,NA,NA
+"Berlin, Stadt",76d17728,NA,NA,NA
+"Berlin, Stadt",79492690,NA,NA,NA
+"Berlin, Stadt",826dd0c7,NA,NA,NA
+"Berlin, Stadt",8824fcd9,NA,NA,NA
+"Berlin, Stadt",88eeed9e,NA,NA,NA
+"Berlin, Stadt",90106a06,NA,NA,NA
+"Berlin, Stadt",91480600,NA,NA,NA
+"Berlin, Stadt",91aec919,NA,NA,NA
+"Berlin, Stadt",94f70c97,NA,NA,NA
+"Berlin, Stadt",951cf099,NA,NA,NA
+"Berlin, Stadt",9615e5ed,NA,NA,NA
+"Berlin, Stadt",9619449a,NA,NA,NA
+"Berlin, Stadt",96198dfe,NA,NA,NA
+"Berlin, Stadt",9afd315e,NA,NA,NA
+"Berlin, Stadt",9bb19729,NA,NA,NA
+"Berlin, Stadt",a0bb7403,NA,NA,NA
+"Berlin, Stadt",a490f1e7,NA,NA,NA
+"Berlin, Stadt",a58de4a5,NA,NA,NA
+"Berlin, Stadt",a5f31197,NA,NA,NA
+"Berlin, Stadt",affc6065,NA,NA,NA
+"Berlin, Stadt",b08fcf37,NA,NA,NA
+"Berlin, Stadt",b671e449,NA,NA,NA
+"Berlin, Stadt",b6a1271d,NA,NA,NA
+"Berlin, Stadt",bbdb6864,NA,NA,NA
+"Berlin, Stadt",c1ef8d9c,NA,NA,NA
+"Berlin, Stadt",d27a3277,NA,NA,NA
+"Berlin, Stadt",d440375e,NA,NA,NA
+"Berlin, Stadt",dc01bca4,NA,NA,NA
+"Berlin, Stadt",dfbc6aa7,NA,NA,NA
+"Berlin, Stadt",e18540d4,NA,NA,NA
+"Berlin, Stadt",e315c0b4,NA,NA,NA
+"Berlin, Stadt",ec971695,NA,NA,NA
+"Berlin, Stadt",f41b403a,NA,NA,NA
+"Berlin, Stadt",f877d5b1,NA,NA,NA
+"Berlin, Stadt",f9edaf04,NA,NA,NA
+"Berlin, Stadt",fd140f90,NA,NA,NA
+"Berlin, Stadt",fd2777c8,NA,NA,NA
+"Bielefeld, Stadt",05209af1,NA,NA,NA
+"Bielefeld, Stadt",0fc0695c,NA,NA,NA
+"Bielefeld, Stadt",1d3b1be2,NA,NA,NA
+"Bochum, Stadt",01c49c1c,NA,NA,NA
+"Bochum, Stadt",030fe524,NA,NA,NA
+"Bochum, Stadt",133d5f9e,NA,NA,NA
+"Bochum, Stadt",24003f9a,NA,NA,NA
+"Bochum, Stadt",39064a12,NA,NA,NA
+"Bochum, Stadt",e236d9a6,NA,NA,NA
+"Bonn, Stadt",26447dd4,NA,NA,NA
+"Bonn, Stadt",2c701c52,NA,NA,NA
+"Bonn, Stadt",44107863,NA,NA,NA
+"Bonn, Stadt",45eecf0d,NA,NA,NA
+"Bonn, Stadt",471e725c,NA,NA,NA
+"Bonn, Stadt",5e22812f,NA,NA,NA
+"Bonn, Stadt",7d677107,NA,NA,NA
+"Bonn, Stadt",dc1404eb,NA,NA,NA
+"Bonn, Stadt",e9937fed,NA,NA,NA
+"Bottrop, Stadt",bc412e67,NA,NA,NA
+"Brandenburg an der Havel, Stadt",cd6e2a1c,NA,NA,NA
+"Braunschweig, Stadt",aed7081c,NA,NA,NA
+"Braunschweig, Stadt",cfd0b1cb,NA,NA,NA
+"Bremen, Stadt",0693848a,NA,NA,NA
+"Bremen, Stadt",17ebc36b,NA,NA,NA
+"Bremen, Stadt",3a1c62f9,NA,NA,NA
+"Bremen, Stadt",7a0cb61b,NA,NA,NA
+"Bremen, Stadt",7e461ced,NA,NA,NA
+"Bremen, Stadt",8cac83a9,NA,NA,NA
+"Bremen, Stadt",cb6b1173,NA,NA,NA
+"Bremen, Stadt",eca20cb0,NA,NA,NA
+"Bremen, Stadt",ee405e66,NA,NA,NA
+"Bremen, Stadt",fb37f6db,NA,NA,NA
+"Bremerhaven, Stadt",50a0a0bf,NA,NA,NA
+"Bremerhaven, Stadt",e3b5d01b,NA,NA,NA
+"Bremerhaven, Stadt",fc08ea51,NA,NA,NA
+"Chemnitz, Stadt",6b13492f,NA,NA,NA
+"Chemnitz, Stadt",7edb0df5,NA,NA,NA
+"Chemnitz, Stadt",ec9f165e,NA,NA,NA
+"Chemnitz, Stadt",fe49915c,NA,NA,NA
+"Darmstadt, Wissenschaftsstadt",07810d13,NA,NA,NA
+"Darmstadt, Wissenschaftsstadt",309dcf99,NA,NA,NA
+"Delmenhorst, Stadt",4724db0e,NA,NA,NA
+"Delmenhorst, Stadt",9215f631,NA,NA,NA
+"Dessau-Roßlau, Stadt",25552baf,NA,NA,NA
+"Dessau-Roßlau, Stadt",83230e2a,NA,NA,NA
+"Dessau-Roßlau, Stadt",9d82c7cf,NA,NA,NA
+"Dessau-Roßlau, Stadt",bf908a07,NA,NA,NA
+"Dessau-Roßlau, Stadt",c9a20509,NA,NA,NA
+"Dessau-Roßlau, Stadt",e0898f3f,NA,NA,NA
+Dillingen a.d.Donau,df2920d8,NA,NA,NA
+"Dortmund, Stadt",00f40dc6,NA,NA,NA
+"Dortmund, Stadt",0ef827aa,NA,NA,NA
+"Dortmund, Stadt",181fc94a,NA,NA,NA
+"Dortmund, Stadt",1b41f29b,NA,NA,NA
+"Dortmund, Stadt",22f5aa14,NA,NA,NA
+"Dortmund, Stadt",29a2856a,NA,NA,NA
+"Dortmund, Stadt",43c894cd,NA,NA,NA
+"Dortmund, Stadt",44cc24c2,NA,NA,NA
+"Dortmund, Stadt",5934fd20,NA,NA,NA
+"Dortmund, Stadt",77babd76,NA,NA,NA
+"Dortmund, Stadt",a53d9481,NA,NA,NA
+"Dortmund, Stadt",ada05153,NA,NA,NA
+"Dortmund, Stadt",cc449e69,NA,NA,NA
+"Dortmund, Stadt",d7a2983d,NA,NA,NA
+"Dortmund, Stadt",e1bdc094,NA,NA,NA
+"Dortmund, Stadt",eb960435,NA,NA,NA
+"Dresden, Stadt",154f16ab,NA,NA,NA
+"Dresden, Stadt",23a67d6d,NA,NA,NA
+"Dresden, Stadt",45720cfb,NA,NA,NA
+"Dresden, Stadt",63b926a9,NA,NA,NA
+"Dresden, Stadt",71a1d3ad,NA,NA,NA
+"Dresden, Stadt",7ce75af5,NA,NA,NA
+"Dresden, Stadt",7d61124b,NA,NA,NA
+"Dresden, Stadt",8c26a331,NA,NA,NA
+"Dresden, Stadt",bcac42a5,NA,NA,NA
+"Dresden, Stadt",c03598bf,NA,NA,NA
+"Dresden, Stadt",c2ab8c7a,NA,NA,NA
+"Dresden, Stadt",d7fc3e22,NA,NA,NA
+"Duisburg, Stadt",07d7825b,NA,NA,NA
+"Duisburg, Stadt",3574ec89,NA,NA,NA
+"Duisburg, Stadt",5e688959,NA,NA,NA
+"Duisburg, Stadt",65dcc920,NA,NA,NA
+"Duisburg, Stadt",6b4f98be,NA,NA,NA
+"Duisburg, Stadt",7c992baf,NA,NA,NA
+"Duisburg, Stadt",7fa2ab2a,NA,NA,NA
+"Duisburg, Stadt",80e5c119,NA,NA,NA
+"Duisburg, Stadt",9dc9860a,NA,NA,NA
+"Duisburg, Stadt",c31ad9d8,NA,NA,NA
+"Duisburg, Stadt",e9d8b4ab,NA,NA,NA
+"Düsseldorf, Stadt",153c617d,NA,NA,NA
+"Düsseldorf, Stadt",29e64437,NA,NA,NA
+"Düsseldorf, Stadt",4c24436b,NA,NA,NA
+"Düsseldorf, Stadt",4de35223,NA,NA,NA
+"Düsseldorf, Stadt",74731c11,NA,NA,NA
+"Düsseldorf, Stadt",819c82ef,NA,NA,NA
+"Düsseldorf, Stadt",a1e6c159,NA,NA,NA
+"Düsseldorf, Stadt",b65b3727,NA,NA,NA
+"Düsseldorf, Stadt",b9646275,NA,NA,NA
+"Düsseldorf, Stadt",c009f4ae,NA,NA,NA
+"Düsseldorf, Stadt",dd662498,NA,NA,NA
+"Eisenach, Stadt",ca3e7f56,NA,NA,NA
+"Eisenach, Stadt",ce5b9730,NA,NA,NA
+"Eisenach, Stadt",dc5375e7,NA,NA,NA
+"Emden, Stadt",4a047c2a,NA,NA,NA
+"Erfurt, Stadt",14a993e5,NA,NA,NA
+"Erfurt, Stadt",6bea6b05,NA,NA,NA
+"Erfurt, Stadt",7bcad57c,NA,NA,NA
+"Erfurt, Stadt",8f09df66,NA,NA,NA
+"Erfurt, Stadt",950cfc5a,NA,NA,NA
+"Erfurt, Stadt",c53a6ff2,NA,NA,NA
+"Erfurt, Stadt",e37b8830,NA,NA,NA
+Erlangen,f607ad8f,NA,NA,NA
+"Essen, Stadt",0adaa19c,NA,NA,NA
+"Essen, Stadt",181b32d8,NA,NA,NA
+"Essen, Stadt",40a5d334,NA,NA,NA
+"Essen, Stadt",4963270b,NA,NA,NA
+"Essen, Stadt",51687bf4,NA,NA,NA
+"Essen, Stadt",5db579ba,NA,NA,NA
+"Essen, Stadt",7789e987,NA,NA,NA
+"Essen, Stadt",81dc380d,NA,NA,NA
+"Essen, Stadt",8976d093,NA,NA,NA
+"Essen, Stadt",cee2df0b,NA,NA,NA
+"Essen, Stadt",f00d788a,NA,NA,NA
+"Flensburg, Stadt",2b8dae62,NA,NA,NA
+"Frankfurt (Oder), Stadt",0b4f8706,NA,NA,NA
+"Frankfurt am Main, Stadt",016f8da3,NA,NA,NA
+"Frankfurt am Main, Stadt",127a058d,NA,NA,NA
+"Frankfurt am Main, Stadt",17ed9717,NA,NA,NA
+"Frankfurt am Main, Stadt",1cd9a33b,NA,NA,NA
+"Frankfurt am Main, Stadt",26f57781,NA,NA,NA
+"Frankfurt am Main, Stadt",42d3903b,NA,NA,NA
+"Frankfurt am Main, Stadt",438f9e1c,NA,NA,NA
+"Frankfurt am Main, Stadt",54130bc8,NA,NA,NA
+"Frankfurt am Main, Stadt",7f936d81,NA,NA,NA
+"Frankfurt am Main, Stadt",9530d024,NA,NA,NA
+"Frankfurt am Main, Stadt",9dae700d,NA,NA,NA
+"Frankfurt am Main, Stadt",c911af11,NA,NA,NA
+"Frankfurt am Main, Stadt",e3c55957,NA,NA,NA
+"Frankfurt am Main, Stadt",e54a910c,NA,NA,NA
+"Frankfurt am Main, Stadt",fe9e434d,NA,NA,NA
+Freiburg im Breisgau,13d66ccb,NA,NA,NA
+Freiburg im Breisgau,425a560b,NA,NA,NA
+Freiburg im Breisgau,5b20069c,NA,NA,NA
+Freiburg im Breisgau,81a42a6e,NA,NA,NA
+Freiburg im Breisgau,915b35e2,NA,NA,NA
+Freiburg im Breisgau,9350546f,NA,NA,NA
+Freiburg im Breisgau,93ff7f46,NA,NA,NA
+Freiburg im Breisgau,a3dc2e79,NA,NA,NA
+Freiburg im Breisgau,b8a5c06b,NA,NA,NA
+Freiburg im Breisgau,e488c948,NA,NA,NA
+"Gelsenkirchen, Stadt",21ae2188,NA,NA,NA
+"Gelsenkirchen, Stadt",46089550,NA,NA,NA
+"Gelsenkirchen, Stadt",50f9587b,NA,NA,NA
+"Gelsenkirchen, Stadt",8d12bebe,NA,NA,NA
+"Gelsenkirchen, Stadt",99e68d71,NA,NA,NA
+"Gelsenkirchen, Stadt",a2c56e8d,NA,NA,NA
+"Gelsenkirchen, Stadt",edd982f8,NA,NA,NA
+"Gera, Stadt",5f81b3c9,NA,NA,NA
+"Gera, Stadt",5f8905e0,NA,NA,NA
+"Gera, Stadt",b159a2ca,NA,NA,NA
+"Hagen, Stadt der FernUniversität",3f63871c,NA,NA,NA
+"Hagen, Stadt der FernUniversität",4046fd18,NA,NA,NA
+"Hagen, Stadt der FernUniversität",44850067,NA,NA,NA
+"Hagen, Stadt der FernUniversität",645d91e2,NA,NA,NA
+"Hagen, Stadt der FernUniversität",aa8037e5,NA,NA,NA
+"Hagen, Stadt der FernUniversität",b6c4557b,NA,NA,NA
+"Halle (Saale), Stadt",6f318761,NA,NA,NA
+"Halle (Saale), Stadt",7a724c3e,NA,NA,NA
+"Halle (Saale), Stadt",9168c96e,NA,NA,NA
+"Halle (Saale), Stadt",b5a1879b,NA,NA,NA
+"Halle (Saale), Stadt",da9033be,NA,NA,NA
+"Halle (Saale), Stadt",e821f564,NA,NA,NA
+"Halle (Saale), Stadt",eddfc286,NA,NA,NA
+"Halle (Saale), Stadt",f68ea82d,NA,NA,NA
+"Halle (Saale), Stadt",fe0137b4,NA,NA,NA
+"Hamburg, Freie und Hansestadt",00635408,NA,NA,NA
+"Hamburg, Freie und Hansestadt",009a2a8b,NA,NA,NA
+"Hamburg, Freie und Hansestadt",0135c889,NA,NA,NA
+"Hamburg, Freie und Hansestadt",01a526e9,NA,NA,NA
+"Hamburg, Freie und Hansestadt",08f3abfc,NA,NA,NA
+"Hamburg, Freie und Hansestadt",0a9ed7b6,NA,NA,NA
+"Hamburg, Freie und Hansestadt",0d739a0e,NA,NA,NA
+"Hamburg, Freie und Hansestadt",0fd7f265,NA,NA,NA
+"Hamburg, Freie und Hansestadt",16449eda,NA,NA,NA
+"Hamburg, Freie und Hansestadt",19824518,NA,NA,NA
+"Hamburg, Freie und Hansestadt",4918245a,NA,NA,NA
+"Hamburg, Freie und Hansestadt",4e17f5ec,NA,NA,NA
+"Hamburg, Freie und Hansestadt",4efadfc7,NA,NA,NA
+"Hamburg, Freie und Hansestadt",4fc610f4,NA,NA,NA
+"Hamburg, Freie und Hansestadt",52777b07,NA,NA,NA
+"Hamburg, Freie und Hansestadt",5726366e,NA,NA,NA
+"Hamburg, Freie und Hansestadt",697756a7,NA,NA,NA
+"Hamburg, Freie und Hansestadt",7433f4e5,NA,NA,NA
+"Hamburg, Freie und Hansestadt",78fe269f,NA,NA,NA
+"Hamburg, Freie und Hansestadt",881fae02,NA,NA,NA
+"Hamburg, Freie und Hansestadt",8ae9fab9,NA,NA,NA
+"Hamburg, Freie und Hansestadt",8bfa5742,NA,NA,NA
+"Hamburg, Freie und Hansestadt",96988b14,NA,NA,NA
+"Hamburg, Freie und Hansestadt",a0a79c11,NA,NA,NA
+"Hamburg, Freie und Hansestadt",a1e59b52,NA,NA,NA
+"Hamburg, Freie und Hansestadt",aa65e363,NA,NA,NA
+"Hamburg, Freie und Hansestadt",b27c8dbe,NA,NA,NA
+"Hamburg, Freie und Hansestadt",b7180648,NA,NA,NA
+"Hamburg, Freie und Hansestadt",b9551a7c,NA,NA,NA
+"Hamburg, Freie und Hansestadt",bf5f6657,NA,NA,NA
+"Hamburg, Freie und Hansestadt",c6fbfd6e,NA,NA,NA
+"Hamburg, Freie und Hansestadt",c8aaf236,NA,NA,NA
+"Hamburg, Freie und Hansestadt",ce24a210,NA,NA,NA
+"Hamburg, Freie und Hansestadt",d3b7a2c8,NA,NA,NA
+"Hamburg, Freie und Hansestadt",dd471751,NA,NA,NA
+"Hamburg, Freie und Hansestadt",e3d1b64e,NA,NA,NA
+"Hamburg, Freie und Hansestadt",e73d052e,NA,NA,NA
+"Hamburg, Freie und Hansestadt",e91871e1,NA,NA,NA
+"Hamburg, Freie und Hansestadt",eb82a644,NA,NA,NA
+"Hamburg, Freie und Hansestadt",fafec6b6,NA,NA,NA
+"Hamm, Stadt",d876ad38,NA,NA,NA
+Heidelberg,3e398277,NA,NA,NA
+Heidelberg,5624c0ea,NA,NA,NA
+Heidelberg,69a2383c,NA,NA,NA
+Heidelberg,6cf42231,NA,NA,NA
+Heidelberg,a0d15fe3,NA,NA,NA
+"Herne, Stadt",42b53b9b,NA,NA,NA
+"Herne, Stadt",891bebfd,NA,NA,NA
+"Herne, Stadt",dfd5411e,NA,NA,NA
+"Herne, Stadt",fcb352b7,NA,NA,NA
+Ingolstadt,eac71f81,NA,NA,NA
+"Jena, Stadt",0f46b303,NA,NA,NA
+"Jena, Stadt",865eb3e8,NA,NA,NA
+"Kaiserslautern, kreisfreie Stadt",75319a2c,NA,NA,NA
+"Kaiserslautern, kreisfreie Stadt",a215a0ca,NA,NA,NA
+"Kassel, documenta-Stadt",1019b65c,NA,NA,NA
+"Kassel, documenta-Stadt",1d261517,NA,NA,NA
+"Kassel, documenta-Stadt",46bbe90c,NA,NA,NA
+"Kassel, documenta-Stadt",7e97aee6,NA,NA,NA
+"Kassel, documenta-Stadt",7eb8102b,NA,NA,NA
+"Kassel, documenta-Stadt",938f4143,NA,NA,NA
+"Kassel, documenta-Stadt",96095572,NA,NA,NA
+Kaufbeuren,6a6bfafe,NA,NA,NA
+Kempten (Allgäu),5a4a6b93,NA,NA,NA
+"Kiel, Landeshauptstadt",1ab58ddf,NA,NA,NA
+"Kiel, Landeshauptstadt",518d8a33,NA,NA,NA
+"Kiel, Landeshauptstadt",5ef625b6,NA,NA,NA
+"Kiel, Landeshauptstadt",c33a39f0,NA,NA,NA
+"Kiel, Landeshauptstadt",fc996718,NA,NA,NA
+Kleve,7da715a5,NA,NA,NA
+Kleve,8dece306,NA,NA,NA
+Kleve,e3d9a20b,NA,NA,NA
+Kleve,eb736e6a,NA,NA,NA
+"Koblenz, kreisfreie Stadt",397448ea,NA,NA,NA
+"Koblenz, kreisfreie Stadt",6bbd3e21,NA,NA,NA
+"Koblenz, kreisfreie Stadt",7ce1a423,NA,NA,NA
+"Krefeld, Stadt",126cbb54,NA,NA,NA
+"Krefeld, Stadt",26093cdf,NA,NA,NA
+"Krefeld, Stadt",338fcd72,NA,NA,NA
+"Krefeld, Stadt",358b3d85,NA,NA,NA
+"Krefeld, Stadt",df1e1b67,NA,NA,NA
+"Köln, Stadt",08bc4711,NA,NA,NA
+"Köln, Stadt",0b8bbb97,NA,NA,NA
+"Köln, Stadt",6f4a0a77,NA,NA,NA
+"Köln, Stadt",7ad90fb7,NA,NA,NA
+"Köln, Stadt",8e707cb5,NA,NA,NA
+"Köln, Stadt",936d44a9,NA,NA,NA
+"Köln, Stadt",9da2d4de,NA,NA,NA
+"Köln, Stadt",aad29a35,NA,NA,NA
+"Köln, Stadt",c1bfada1,NA,NA,NA
+"Köln, Stadt",c4d9aba1,NA,NA,NA
+"Köln, Stadt",c94e80d0,NA,NA,NA
+"Köln, Stadt",cbdaa7c8,NA,NA,NA
+"Köln, Stadt",cc9f4fbe,NA,NA,NA
+"Köln, Stadt",d2fd7ea7,NA,NA,NA
+"Köln, Stadt",d89261f5,NA,NA,NA
+"Landau in der Pfalz, kreisfreie Stadt",a328c4fe,NA,NA,NA
+"Landau in der Pfalz, kreisfreie Stadt",e3672af8,NA,NA,NA
+Landkreis Rostock,3b2400f4,NA,NA,NA
+Landkreis Rostock,656ba0b4,NA,NA,NA
+Landkreis Rostock,6b333fd3,NA,NA,NA
+Landkreis Rostock,bb394321,NA,NA,NA
+Landsberg am Lech,18b9ab93,NA,NA,NA
+Landsberg am Lech,336ca721,NA,NA,NA
+Landsberg am Lech,5e00835a,NA,NA,NA
+Landsberg am Lech,64a0010c,NA,NA,NA
+Landsberg am Lech,f91b5caa,NA,NA,NA
+"Leipzig, Stadt",1b1fe2a2,NA,NA,NA
+"Leipzig, Stadt",2750ae88,NA,NA,NA
+"Leipzig, Stadt",275f9a72,NA,NA,NA
+"Leipzig, Stadt",3aa0ce30,NA,NA,NA
+"Leipzig, Stadt",498e540a,NA,NA,NA
+"Leipzig, Stadt",4cacaa59,NA,NA,NA
+"Leipzig, Stadt",6125ba57,NA,NA,NA
+"Leipzig, Stadt",6529fdb7,NA,NA,NA
+"Leipzig, Stadt",75525986,NA,NA,NA
+"Leipzig, Stadt",790e81bf,NA,NA,NA
+"Leipzig, Stadt",ac02f199,NA,NA,NA
+"Leipzig, Stadt",bdd88183,NA,NA,NA
+"Leipzig, Stadt",c07dfa19,NA,NA,NA
+"Leipzig, Stadt",d97cfc55,NA,NA,NA
+"Leipzig, Stadt",dcda6ed5,NA,NA,NA
+"Leipzig, Stadt",e2027b7f,NA,NA,NA
+"Leipzig, Stadt",e6ac4236,NA,NA,NA
+"Leipzig, Stadt",e78144f3,NA,NA,NA
+"Leipzig, Stadt",f64eadd3,NA,NA,NA
+Lindau (Bodensee),2f690288,NA,NA,NA
+"Ludwigshafen am Rhein, kreisfreie Stadt",3d549edf,NA,NA,NA
+"Ludwigshafen am Rhein, kreisfreie Stadt",574af89d,NA,NA,NA
+"Lübeck, Hansestadt",07522083,NA,NA,NA
+"Lübeck, Hansestadt",09027446,NA,NA,NA
+"Lübeck, Hansestadt",3b9003bb,NA,NA,NA
+"Lübeck, Hansestadt",69078bd5,NA,NA,NA
+"Lübeck, Hansestadt",8894965b,NA,NA,NA
+"Lübeck, Hansestadt",f56b1e8d,NA,NA,NA
+"Magdeburg, Landeshauptstadt",25585825,NA,NA,NA
+"Magdeburg, Landeshauptstadt",38dcc32e,NA,NA,NA
+"Magdeburg, Landeshauptstadt",48dd6746,NA,NA,NA
+"Magdeburg, Landeshauptstadt",8e4508b0,NA,NA,NA
+"Magdeburg, Landeshauptstadt",a3d3cbf2,NA,NA,NA
+"Magdeburg, Landeshauptstadt",b9974c04,NA,NA,NA
+"Magdeburg, Landeshauptstadt",c9571e70,NA,NA,NA
+"Magdeburg, Landeshauptstadt",eb9bc240,NA,NA,NA
+"Magdeburg, Landeshauptstadt",ec508fd8,NA,NA,NA
+"Mainz, kreisfreie Stadt",3a2d873e,NA,NA,NA
+"Mainz, kreisfreie Stadt",a881fedf,NA,NA,NA
+"Mainz, kreisfreie Stadt",cba04520,NA,NA,NA
+"Mainz, kreisfreie Stadt",e1d354cb,NA,NA,NA
+Mannheim,15825085,NA,NA,NA
+Mannheim,20117f66,NA,NA,NA
+Mannheim,2047faa5,NA,NA,NA
+Mannheim,732f166e,NA,NA,NA
+Mannheim,84d4a0a8,NA,NA,NA
+Mannheim,8c926f33,NA,NA,NA
+Mannheim,9de222fc,NA,NA,NA
+Mannheim,b56f4d87,NA,NA,NA
+Mannheim,ce183b0c,NA,NA,NA
+Mannheim,d59af798,NA,NA,NA
+Mannheim,df05d179,NA,NA,NA
+"Mönchengladbach, Stadt",39af2982,NA,NA,NA
+"Mönchengladbach, Stadt",525e7190,NA,NA,NA
+"Mönchengladbach, Stadt",7faa39fc,NA,NA,NA
+"Mönchengladbach, Stadt",ab90df61,NA,NA,NA
+"Mönchengladbach, Stadt",af88904f,NA,NA,NA
+"Mönchengladbach, Stadt",d04b3633,NA,NA,NA
+Mühldorf a.Inn,a0dacebd,NA,NA,NA
+Mühldorf a.Inn,cd066006,NA,NA,NA
+"Mülheim an der Ruhr, Stadt",1548a0c3,NA,NA,NA
+"Mülheim an der Ruhr, Stadt",5d033e30,NA,NA,NA
+"Mülheim an der Ruhr, Stadt",70e0c060,NA,NA,NA
+"Mülheim an der Ruhr, Stadt",85a8e982,NA,NA,NA
+"Mülheim an der Ruhr, Stadt",c6635d4d,NA,NA,NA
+München,05cd8561,NA,NA,NA
+München,30510177,NA,NA,NA
+München,56d971e6,NA,NA,NA
+München,a96f8e6e,NA,NA,NA
+München,dabe0310,NA,NA,NA
+München,e7337d08,NA,NA,NA
+"München, Landeshauptstadt",1a9ec010,NA,NA,NA
+"München, Landeshauptstadt",1c624c2e,NA,NA,NA
+"München, Landeshauptstadt",1f30f9fc,NA,NA,NA
+"München, Landeshauptstadt",25c8a9ff,NA,NA,NA
+"München, Landeshauptstadt",2699b5e9,NA,NA,NA
+"München, Landeshauptstadt",26ea5a61,NA,NA,NA
+"München, Landeshauptstadt",29af2d06,NA,NA,NA
+"München, Landeshauptstadt",341b39e8,NA,NA,NA
+"München, Landeshauptstadt",3810818c,NA,NA,NA
+"München, Landeshauptstadt",3c1f8a47,NA,NA,NA
+"München, Landeshauptstadt",3ed3be72,NA,NA,NA
+"München, Landeshauptstadt",3ff5a136,NA,NA,NA
+"München, Landeshauptstadt",47608e01,NA,NA,NA
+"München, Landeshauptstadt",4b150430,NA,NA,NA
+"München, Landeshauptstadt",4b587ab6,NA,NA,NA
+"München, Landeshauptstadt",51a194e7,NA,NA,NA
+"München, Landeshauptstadt",5849eb57,NA,NA,NA
+"München, Landeshauptstadt",60dc4b60,NA,NA,NA
+"München, Landeshauptstadt",7444ccb3,NA,NA,NA
+"München, Landeshauptstadt",80bac17d,NA,NA,NA
+"München, Landeshauptstadt",810ac534,NA,NA,NA
+"München, Landeshauptstadt",87c5c02c,NA,NA,NA
+"München, Landeshauptstadt",8c91d441,NA,NA,NA
+"München, Landeshauptstadt",9b6c76a1,NA,NA,NA
+"München, Landeshauptstadt",a5de842a,NA,NA,NA
+"München, Landeshauptstadt",a66a83bb,NA,NA,NA
+"München, Landeshauptstadt",aee6c78e,NA,NA,NA
+"München, Landeshauptstadt",afaf86f6,NA,NA,NA
+"München, Landeshauptstadt",b1940a82,NA,NA,NA
+"München, Landeshauptstadt",b36ca544,NA,NA,NA
+"München, Landeshauptstadt",baafdb71,NA,NA,NA
+"München, Landeshauptstadt",bb25c42b,NA,NA,NA
+"München, Landeshauptstadt",bc743796,NA,NA,NA
+"München, Landeshauptstadt",c09e9102,NA,NA,NA
+"München, Landeshauptstadt",c22c3158,NA,NA,NA
+"München, Landeshauptstadt",d067a9a8,NA,NA,NA
+"München, Landeshauptstadt",d1cd02f6,NA,NA,NA
+"München, Landeshauptstadt",d93b4e25,NA,NA,NA
+"München, Landeshauptstadt",df406170,NA,NA,NA
+"München, Landeshauptstadt",e51678f6,NA,NA,NA
+"München, Landeshauptstadt",e9a0360f,NA,NA,NA
+"München, Landeshauptstadt",ebf0de40,NA,NA,NA
+"München, Landeshauptstadt",fae75a2e,NA,NA,NA
+"Münster, Stadt",6da4a764,NA,NA,NA
+"Münster, Stadt",6e65e157,NA,NA,NA
+"Münster, Stadt",b08b53f1,NA,NA,NA
+"Münster, Stadt",f5432fbb,NA,NA,NA
+Neumarkt i.d.OPf.,cb80bd6a,NA,NA,NA
+Neumarkt i.d.OPf.,ccd52e62,NA,NA,NA
+"Neumünster, Stadt",4829d435,NA,NA,NA
+"Neumünster, Stadt",b16c6bb3,NA,NA,NA
+"Neumünster, Stadt",bf0a8f2f,NA,NA,NA
+Neustadt a.d.Aisch-Bad Windsheim,03014a3b,NA,NA,NA
+Neustadt a.d.Aisch-Bad Windsheim,69c130b3,NA,NA,NA
+Neustadt a.d.Aisch-Bad Windsheim,b97fda81,NA,NA,NA
+Neustadt a.d.Waldnaab,992da613,NA,NA,NA
+Neustadt a.d.Waldnaab,a6567bf5,NA,NA,NA
+Nienburg (Weser),6c574efd,NA,NA,NA
+Nienburg (Weser),e8768b1a,NA,NA,NA
+Nürnberg,12dee206,NA,NA,NA
+Nürnberg,16722060,NA,NA,NA
+Nürnberg,2827b0b1,NA,NA,NA
+Nürnberg,495d76a5,NA,NA,NA
+Nürnberg,638f02c1,NA,NA,NA
+Nürnberg,8251fecf,NA,NA,NA
+Nürnberg,886de45f,NA,NA,NA
+Nürnberg,959f89e3,NA,NA,NA
+Nürnberg,9a42df74,NA,NA,NA
+Nürnberg,af698eb4,NA,NA,NA
+Nürnberg,cf545de2,NA,NA,NA
+Nürnberg,dcc4a1ac,NA,NA,NA
+Nürnberg,e8309100,NA,NA,NA
+Nürnberg,eb8c531a,NA,NA,NA
+Nürnberg,f455ca3b,NA,NA,NA
+Nürnberg,fd0cc9fc,NA,NA,NA
+Nürnberg,feee3c39,NA,NA,NA
+"Oberhausen, Stadt",56f4f6a6,NA,NA,NA
+"Oberhausen, Stadt",98e00f0e,NA,NA,NA
+"Oberhausen, Stadt",d7606c39,NA,NA,NA
+"Oberhausen, Stadt",df7ccd46,NA,NA,NA
+"Offenbach am Main, Stadt",0e0751b8,NA,NA,NA
+"Offenbach am Main, Stadt",71c9e526,NA,NA,NA
+"Offenbach am Main, Stadt",8880ecb9,NA,NA,NA
+"Offenbach am Main, Stadt",df0fcd44,NA,NA,NA
+"Oldenburg (Oldenburg), Stadt",3f74f1f5,NA,NA,NA
+"Oldenburg (Oldenburg), Stadt",f8759c5f,NA,NA,NA
+"Oldenburg (Oldenburg), Stadt",fe7ab231,NA,NA,NA
+"Osnabrück, Stadt",452094d1,NA,NA,NA
+"Osnabrück, Stadt",6fda3086,NA,NA,NA
+Osterode am Harz,0ea815f3,NA,NA,NA
+Osterode am Harz,53189812,NA,NA,NA
+Pfaffenhofen a.d.Ilm,7dc25d65,NA,NA,NA
+Pforzheim,22792d9d,NA,NA,NA
+Pforzheim,421e707e,NA,NA,NA
+Pforzheim,4462116a,NA,NA,NA
+Pforzheim,a82e9a33,NA,NA,NA
+"Pirmasens, kreisfreie Stadt",23a8a71b,NA,NA,NA
+"Pirmasens, kreisfreie Stadt",96e4f120,NA,NA,NA
+"Pirmasens, kreisfreie Stadt",bb817529,NA,NA,NA
+"Potsdam, Stadt",2406d30c,NA,NA,NA
+"Potsdam, Stadt",803423c0,NA,NA,NA
+"Potsdam, Stadt",8311bdb0,NA,NA,NA
+"Potsdam, Stadt",d51265a2,NA,NA,NA
+"Potsdam, Stadt",da855892,NA,NA,NA
+Region Hannover,001c02c5,NA,NA,NA
+Region Hannover,01fd79b4,NA,NA,NA
+Region Hannover,03a09f7d,NA,NA,NA
+Region Hannover,065bd212,NA,NA,NA
+Region Hannover,095d8b50,NA,NA,NA
+Region Hannover,16da2249,NA,NA,NA
+Region Hannover,22322f60,NA,NA,NA
+Region Hannover,337769ee,NA,NA,NA
+Region Hannover,3783cace,NA,NA,NA
+Region Hannover,3cb8e984,NA,NA,NA
+Region Hannover,55f14993,NA,NA,NA
+Region Hannover,5c1456a9,NA,NA,NA
+Region Hannover,5f85a96c,NA,NA,NA
+Region Hannover,5f9158a7,NA,NA,NA
+Region Hannover,60462433,NA,NA,NA
+Region Hannover,61d037c6,NA,NA,NA
+Region Hannover,6ffc8ddb,NA,NA,NA
+Region Hannover,7b35a92d,NA,NA,NA
+Region Hannover,89772928,NA,NA,NA
+Region Hannover,91564b64,NA,NA,NA
+Region Hannover,96093d1f,NA,NA,NA
+Region Hannover,a3de8765,NA,NA,NA
+Region Hannover,a5794d5d,NA,NA,NA
+Region Hannover,b7bcf1b3,NA,NA,NA
+Region Hannover,baa346d2,NA,NA,NA
+Region Hannover,c5442962,NA,NA,NA
+Region Hannover,c5ad8767,NA,NA,NA
+Region Hannover,c6511815,NA,NA,NA
+Region Hannover,cd9a8de9,NA,NA,NA
+Region Hannover,db8bd17a,NA,NA,NA
+Region Hannover,e33716f2,NA,NA,NA
+Region Hannover,ef4de732,NA,NA,NA
+Region Hannover,fa889464,NA,NA,NA
+Region Hannover,fc515240,NA,NA,NA
+Region Hannover,fdd801c7,NA,NA,NA
+Regionalverband Saarbrücken,058e0e5c,NA,NA,NA
+Regionalverband Saarbrücken,2cbc6aad,NA,NA,NA
+Regionalverband Saarbrücken,644d766e,NA,NA,NA
+Regionalverband Saarbrücken,6506597c,NA,NA,NA
+Regionalverband Saarbrücken,6b7cb25c,NA,NA,NA
+Regionalverband Saarbrücken,ed25dcc9,NA,NA,NA
+Regionalverband Saarbrücken,fc619074,NA,NA,NA
+"Remscheid, Stadt",9f7d1a42,NA,NA,NA
+"Remscheid, Stadt",d4f11dfb,NA,NA,NA
+"Remscheid, Stadt",d88a9cab,NA,NA,NA
+Rotenburg (Wümme),fe19e965,NA,NA,NA
+Saarpfalz-Kreis,464ae49b,NA,NA,NA
+Saarpfalz-Kreis,9e69dbbb,NA,NA,NA
+Saarpfalz-Kreis,bc189242,NA,NA,NA
+"Salzgitter, Stadt",40f5f521,NA,NA,NA
+"Salzgitter, Stadt",c4d4bb49,NA,NA,NA
+Schwerin,1a0baa0d,NA,NA,NA
+Schwerin,9c9b3737,NA,NA,NA
+Schwerin,d624d9f7,NA,NA,NA
+Schwerin,e90247f9,NA,NA,NA
+St. Wendel,11b132c5,NA,NA,NA
+Straubing,4d609879,NA,NA,NA
+Straubing,f00caeb0,NA,NA,NA
+Stuttgart,02e92e42,NA,NA,NA
+Stuttgart,088f8d21,NA,NA,NA
+Stuttgart,1061d397,NA,NA,NA
+Stuttgart,32cdd45a,NA,NA,NA
+Stuttgart,5155f547,NA,NA,NA
+Stuttgart,892bbd3e,NA,NA,NA
+Stuttgart,8a9832ef,NA,NA,NA
+Stuttgart,9485a7ca,NA,NA,NA
+Stuttgart,b3c11294,NA,NA,NA
+Stuttgart,cbb4218a,NA,NA,NA
+Stuttgart,d23ee57d,NA,NA,NA
+Stuttgart,dbb06ebf,NA,NA,NA
+Stuttgart,f02109fb,NA,NA,NA
+Stuttgart,f0969cd6,NA,NA,NA
+Städteregion Aachen,05417701,NA,NA,NA
+Städteregion Aachen,0cb91bea,NA,NA,NA
+Städteregion Aachen,809b9ad5,NA,NA,NA
+Städteregion Aachen,911e0e43,NA,NA,NA
+Städteregion Aachen,e87deeab,NA,NA,NA
+Städteregion Aachen,faaa57e7,NA,NA,NA
+Städteregion Aachen,fef72fbb,NA,NA,NA
+"Trier, kreisfreie Stadt",0ba01044,NA,NA,NA
+Ulm,14ed74b0,NA,NA,NA
+Ulm,a7556ad9,NA,NA,NA
+Ulm,d6ba1700,NA,NA,NA
+Weiden i.d.OPf.,df25b295,NA,NA,NA
+Weiden i.d.OPf.,efdd4c22,NA,NA,NA
+"Weimar, Stadt",618b76fb,NA,NA,NA
+"Weimar, Stadt",c5930c09,NA,NA,NA
+"Weimar, Stadt",d08d4b1c,NA,NA,NA
+"Weimar, Stadt",eda8d06e,NA,NA,NA
+"Wiesbaden, Landeshauptstadt",6655157e,NA,NA,NA
+"Wiesbaden, Landeshauptstadt",7ce47edb,NA,NA,NA
+"Wiesbaden, Landeshauptstadt",8d684151,NA,NA,NA
+"Wiesbaden, Landeshauptstadt",9797d5d2,NA,NA,NA
+"Wilhelmshaven, Stadt",137e19bb,NA,NA,NA
+"Wolfsburg, Stadt",67c05fbb,NA,NA,NA
+"Wolfsburg, Stadt",a156ca66,NA,NA,NA
+"Wolfsburg, Stadt",f684eeee,NA,NA,NA
+"Worms, kreisfreie Stadt",d7dddabf,NA,NA,NA
+Wunsiedel i.Fichtelgebirge,8e16ed43,NA,NA,NA
+"Wuppertal, Stadt",56e3a627,NA,NA,NA
+"Wuppertal, Stadt",5aa2f27e,NA,NA,NA
+"Wuppertal, Stadt",a5b3ab7e,NA,NA,NA
+"Wuppertal, Stadt",a6afbc49,NA,NA,NA
+"Wuppertal, Stadt",dbe425bb,NA,NA,NA
+"Zweibrücken, kreisfreie Stadt",0540aceb,NA,NA,NA
