@@ -81,6 +81,25 @@ transformed parameters
 {
   // Reparametrize Half-Cauchy for optimization in HMC
   vector<lower=0>[G-1] gp_alpha = tan(gp_alpha_unif);
+  array[G] matrix[A, A] log_cnt_rate;
+
+  { // Local scope
+    matrix[A, A] f_MM, f_FF, f_MF;
+    f_MM = hsgp_matern52_restruct(A, gp_alpha[MM], gp_rho_1[MM], gp_rho_2[MM],
+                                  L1, L2, M1, M2, PHI1, PHI2,
+                                  z[1:M1,], NN_IDX);
+    f_FF = hsgp_matern52_restruct(A, gp_alpha[FF], gp_rho_1[FF], gp_rho_2[FF],
+                                  L1, L2, M1, M2, PHI1, PHI2,
+                                  z[(M1+1):2*M1,], NN_IDX);
+    f_MF = hsgp_matern52_restruct(A, gp_alpha[MF], gp_rho_1[MF], gp_rho_2[MF],
+                                  L1, L2, M1, M2, PHI1, PHI2,
+                                  z[(2*M1+1):3*M1,], NN_IDX);
+
+    log_cnt_rate[MM] = beta_0[MM] + symmetrize_from_lower_tri(f_MM);
+    log_cnt_rate[FF] = beta_0[FF] + symmetrize_from_lower_tri(f_FF);
+    log_cnt_rate[MF] = beta_0[MF] + f_MF;
+    log_cnt_rate[FM] = beta_0[FM] + f_MF';
+  }
 }
 
 model
@@ -98,24 +117,7 @@ model
   target += normal_lpdf(beta_0 | 0, 10);
 
   { // Local scpoe
-    matrix[A, A] f_MM, f_FF, f_MF;
-    array[G] matrix[A, A] log_cnt_rate;
     array[G] matrix[A, C] alpha_strata;
-
-    f_MM = hsgp_matern52_restruct(A, gp_alpha[MM], gp_rho_1[MM], gp_rho_2[MM],
-                                  L1, L2, M1, M2, PHI1, PHI2,
-                                  z[1:M1,], NN_IDX);
-    f_FF = hsgp_matern52_restruct(A, gp_alpha[FF], gp_rho_1[FF], gp_rho_2[FF],
-                                  L1, L2, M1, M2, PHI1, PHI2,
-                                  z[(M1+1):2*M1,], NN_IDX);
-    f_MF = hsgp_matern52_restruct(A, gp_alpha[MF], gp_rho_1[MF], gp_rho_2[MF],
-                                  L1, L2, M1, M2, PHI1, PHI2,
-                                  z[(2*M1+1):3*M1,], NN_IDX);
-
-    log_cnt_rate[MM] = beta_0[MM] + symmetrize_from_lower_tri(f_MM);
-    log_cnt_rate[FF] = beta_0[FF] + symmetrize_from_lower_tri(f_FF);
-    log_cnt_rate[MF] = beta_0[MF] + f_MF;
-    log_cnt_rate[FM] = beta_0[FM] + f_MF';
 
     alpha_strata[MM] = exp(log_cnt_rate[MM] + log_offset[MM]) * map_age_to_strata * nu + epsilon;
     alpha_strata[FF] = exp(log_cnt_rate[FF] + log_offset[FF]) * map_age_to_strata * nu + epsilon;
@@ -133,36 +135,19 @@ model
         ),
       to_vector(alpha_strata[FM]')[ROW_MAJOR_IDX_FM]
     );
-    target += neg_binomial_lpmf( Y | alpha_strata_flat, nu/(1+nu));
+    target += neg_binomial_lpmf( Y | alpha_strata_flat, inv(nu) );
   }
 }
 
 generated quantities
 {
   array[N] real log_lik;
-  array[G] matrix[A, A] log_cnt_rate;
   array[G,A,C] int yhat_strata;
 
   { // Local scope
     // The code is a repeat of the model block but it significantly
     // reduces fitted model size
-    matrix[A, A] f_MM, f_FF, f_MF;
     array[G] matrix[A, C] alpha_strata;
-
-    f_MM = hsgp_matern52_restruct(A, gp_alpha[MM], gp_rho_1[MM], gp_rho_2[MM],
-                                  L1, L2, M1, M2, PHI1, PHI2,
-                                  z[1:M1,], NN_IDX);
-    f_FF = hsgp_matern52_restruct(A, gp_alpha[FF], gp_rho_1[FF], gp_rho_2[FF],
-                                  L1, L2, M1, M2, PHI1, PHI2,
-                                  z[(M1+1):2*M1,], NN_IDX);
-    f_MF = hsgp_matern52_restruct(A, gp_alpha[MF], gp_rho_1[MF], gp_rho_2[MF],
-                                  L1, L2, M1, M2, PHI1, PHI2,
-                                  z[(2*M1+1):3*M1,], NN_IDX);
-
-    log_cnt_rate[MM] = beta_0[MM] + symmetrize_from_lower_tri(f_MM);
-    log_cnt_rate[FF] = beta_0[FF] + symmetrize_from_lower_tri(f_FF);
-    log_cnt_rate[MF] = beta_0[MF] + f_MF;
-    log_cnt_rate[FM] = beta_0[FM] + f_MF';
 
     alpha_strata[MM] = exp(log_cnt_rate[MM] + log_offset[MM]) * map_age_to_strata * nu + epsilon;
     alpha_strata[FF] = exp(log_cnt_rate[FF] + log_offset[FF]) * map_age_to_strata * nu + epsilon;
