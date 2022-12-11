@@ -33,7 +33,7 @@ renv::activate("path/to/repository")
 To install all required libraries, execute
 
 ```{r}
-renv::init
+renv::init()
 renv::restore()
 ```
 
