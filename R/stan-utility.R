@@ -228,13 +228,15 @@ add_part_offsets <- function(stan_data, contacts, offsets = NULL, survey = "COVI
   }
 
   if(survey == "POLYMOD"){
-    d <- offsets
 
-    stan_data$log_N_M <- log( d[gender == "Male"]$N )
-    stan_data$log_N_F <- log( d[gender == "Female"]$N )
+    d1 <- complete(offsets[gender == "Male"], age = 0:84, fill = list(N = 1, zeta = 1))
+    d2 <- complete(offsets[gender == "Female"], age = 0:84, fill = list(N = 1, zeta = 1))
+    
+    stan_data$log_N_M <- log( d1$N )
+    stan_data$log_N_F <- log( d2$N )
 
-    stan_data$log_S_M <- log( d[gender == "Male"]$zeta )
-    stan_data$log_S_F <- log( d[gender == "Female"]$zeta )
+    stan_data$log_S_M <- log( d1$zeta )
+    stan_data$log_S_F <- log( d2$zeta )
   }
 
   return(stan_data)
