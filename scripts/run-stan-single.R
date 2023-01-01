@@ -68,19 +68,22 @@ cat(" Configuring Stan data ...")
 stan_data <- init_stan_data()
 
 # Add contact counts
-stan_data <- add_contact_vector(stan_data, dt.cnt, dt.offsets)
+stan_data <- add_contact_vector(stan_data, dt.cnt, single = TRUE)
 
 # Add obs counts
-stan_data <- add_N(stan_data)
+stan_data <- add_N(stan_data, survey = "POLYMOD")
+
+# Add missing u index
+dt.cnt[, u := fcase(wave == 1, 1)]
 
 # Add row major index
-stan_data <- add_row_major_idx(stan_data, dt.offsets)
+stan_data <- add_row_major_idx(stan_data, dt.cnt)
 
 # Add participant offsets
-stan_data <- add_part_offsets(stan_data, dt.offsets)
+stan_data <- add_part_offsets(stan_data, dt.cnt, dt.offsets, survey = 'POLYMOD')
 
 # Add population offsets
-stan_data <- add_pop_offsets(stan_data, dt.pop)
+stan_data <- add_pop_offsets(stan_data, dt.pop, survey = 'POLYMOD')
 
 # Map age to age strata
 stan_data <- add_map_age_to_strata(stan_data)
@@ -92,7 +95,7 @@ stan_data <- add_nn_idx(stan_data)
 stan_data <- add_std_age_idx(stan_data)
 
 # Add HSGP parameters
-stan_data <- add_hsgp_parms(stan_data, args$hsgp_c, args$hsgp_m)
+stan_data <- add_hsgp_parms(stan_data, args$hsgp_c, args$hsgp_m , args$hsgp_m)
 cat(" DONE!\n")
 
 cat(" Compiling Stan model ...")
