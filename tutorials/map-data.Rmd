@@ -1,0 +1,62 @@
+# How to draw a map of Germnay using R and NUTS
+
+This tutorial will cover how we can draw a map of Germany and other European Union countries using R and data from the eurostat website. 
+
+## NUTS Classification
+NUTS, which stands for Nomenclature of territorial units for statistics, is a hierarchical system for dividing up the economic territory of the EU and UK for the purpose of:
+
+1. The collection, development and harmonisation of European regional statistics
+2. Socio-economic analysis of the regions
+3. Framing of the EU regional policies
+
+The NUTS 2021 classification list 92 regions at level 1, 242 regions at level 2, and 1166 regions at level 3. [source](https://ec.europa.eu/eurostat/web/nuts/background).
+
+## Downloading shae files from eurostat
+We can download geographical shape data from The GISCO statistical unit dataset. For our purposes, we will download a GeoJSON file of NUTS 2021 at 10M scale from the following link: https://ec.europa.eu/eurostat/web/gisco/geodata/reference-data/administrative-units-statistical-units/nuts#nuts21
+
+## Processing the data
+```{r}
+library(geojsonio)
+library(data.table)
+library(broom)
+library(ggplot2)
+```
+
+We will begin by using the `geojson_read` function from the `geojsonio` package to load the data. This will load the data into the R environment as a SpatialPolygon DataFrame.
+```{r}
+# Load map data
+spdf_file <- geojson_read('../data/NUTS_RG_10M_2021_3035.geojson', what = 'sp')
+```
+
+We can save some meta data about each region as a separate data table.
+```{r}
+dt.stats <- as.data.table(spdf_file)
+```
+
+Now, we convert the Spatial Polygon DataFrame into a normal data table for fast computations and add back the meta data.
+```{r}
+dt.spdf <- as.data.table( tidy(spdf_file, region = 'id') )
+dt.spdf <- merge(dt.spdf, dt.stats, all.x = TRUE, by = 'id')
+```
+
+For some final preprocessing, we need to divide the longitude and latitude measures by 100000 such that we can visualize it with `ggplot2`
+```{r}
+dt.spdf[, long := long / 100000]
+dt.spdf[, lat := lat / 100000]
+```
+
+## Creating the map
+```{r}
+dt.spdf.de <- dt.spdf[CNTR_CODE == 'DE']
+
+ggplot(dt.spdf.de[LEVL_CODE == 3]) + 
+  geom_polygon(aes(long, lat, group = NUTS_ID)) + 
+  coord_map() + 
+  theme_void()
+```
+
+
+
+
+
+

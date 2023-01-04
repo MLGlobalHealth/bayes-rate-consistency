@@ -81,7 +81,7 @@ transformed parameters
     f_U = hsgp_matern52_restruct(A, gp_alpha[U], gp_rho_1[U], gp_rho_2[U],
                                  L1, L2, M1, M2, PHI1, PHI2,
                                  z[1:M1,], NN_IDX);
-    f_R = hsgp_matern52_restruct(A, gp_alpha[U], gp_rho_1[U], gp_rho_2[U],
+    f_R = hsgp_matern52_restruct(A, gp_alpha[R], gp_rho_1[R], gp_rho_2[R],
                                  L1, L2, M1, M2, PHI1, PHI2,
                                  z[(M1+1):2*M1,], NN_IDX);
     log_cnt_rate[U] = beta_0 + symmetrize_from_lower_tri(f_U);

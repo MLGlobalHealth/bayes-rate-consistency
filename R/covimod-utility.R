@@ -251,14 +251,14 @@ runif.int <- function(min, max) floor(runif(1, min = min, max = max + 0.999))
 impute_child_age <- function(dt.part, seed=1527){
   set.seed(seed)
 
-  tmp <- unique(dt.part[, list(new_id, wave, age, age_strata)])
+  tmp <- unique(dt.part[, .(new_id, wave, age, age_strata)])
   tmp[, min_age := as.numeric(stringr::str_extract(age_strata, "[0-9]{1,2}"))]
   tmp[, max_age := as.numeric(stringr::str_extract(age_strata, "[0-9]{1,2}$"))]
 
   tmp[is.na(age), imp_age := runif.int(min_age, max_age), by=.(new_id)]
   tmp[!is.na(age), imp_age := age]
 
-  dt.part <- merge(dt.part, tmp[, list(new_id, wave, imp_age)])
+  dt.part <- merge(dt.part, tmp[, .(new_id, wave, imp_age)], by = c("new_id", "wave"))
 
   return(dt.part)
 }

@@ -1,0 +1,354 @@
+---
+title: "COVIMOD Regional EDA"
+author: "Shozen Dan"
+date: "2022-12-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Setup
+
+Load the required packages
+```{r message=FALSE}
+library(readr)
+library(purrr)
+library(data.table)
+library(ggplot2)
+library(patchwork)
+
+# Load utility functions
+source('~/bayes-rate-consistency/R/covimod-utility.R')
+
+# Set ggplot theme
+theme_set(theme_bw())
+```
+
+Load COVIMOD data
+```{r}
+# Load the COVIMOD data
+covimod <- read_rds('../data/COVIMOD/COVIMOD_data_2022-12-29.rds')
+dt.part <- covimod$part
+dt.hh <- covimod$hh
+dt.nhh <- covimod$nhh
+dt.pop <- covimod$pop
+
+dt.part <- impute_child_age(dt.part)
+
+# Load map data
+dt.spdf <- as.data.table( read_csv('../data/de-shapes.csv') )
+
+# Load census data
+dt.census <- as.data.table( read_csv('../data/de-census-2011.csv') )
+```
+
+### Map of Germnay divided into NUTS level 3 regions
+```{r}
+ggplot(dt.spdf[LEVL_CODE == 3]) + 
+  geom_polygon(aes(LONG, LAT, group = NUTS_ID), color = "white", size = 0.3) + 
+  coord_map() + 
+  labs(title = "Map of Germany", subtitle = "Divided by NUTS-3 classification") +
+  theme_void()
+
+ggsave("../figures/map-of-germany.png", units = "cm", height = 12.09, width = 15.45) # Save fig.
+```
+
+## Sample size
+### Which regions are included within the sample
+
+### Pooled across all waves
+```{r}
+dt.count <- dt.part[, .(N = length(unique(new_id))), by = NUTS_NAME]
+dt.tmp <- merge(dt.spdf[LEVL_CODE == 3], dt.count, all.x = TRUE, by = 'NUTS_NAME')
+
+# Label regions with no samples
+dt.nosamp <- dt.tmp[is.na(N)]
+dt.nosamp <- dt.nosamp[, .(LONG = mean(LONG),
+                           LAT = mean(LAT)),
+                       by = .(NUTS_NAME)]
+
+ggplot() + 
+  geom_polygon(data = dt.tmp, aes(LONG, LAT, group = NUTS_ID, fill = N)) + 
+  ggrepel::geom_label_repel(data = dt.nosamp, aes(LONG, LAT, label = NUTS_NAME),
+                            label.size = NA, size = 1, box.padding = unit(0.1, 'lines'),
+                            label.padding = 0.15) + 
+  coord_map() + 
+  scale_x_continuous(limits = c(min(dt.tmp$LONG), max(dt.tmp$LONG))) + 
+  viridis::scale_fill_viridis(option = 'H', na.value = "white") +
+  labs(title = 'COVIMOD Sample Size by NUTS-3', subtitle = 'Pooled across all 33 wave', fill = 'N') + 
+  theme_void() + 
+  theme(legend.position = 'right')
+
+ggsave("../figures/pooled-sample-size-with-missing.png", units = "cm", height = 12.09, width = 15.45) # Save fig.
+```
+
+Pooled across all waves, COVIMOD covers
+```{r}
+n.total <- length(unique(dt.tmp[, NUTS_NAME]))
+n.nosamp <- length(unique(dt.tmp[is.na(N), NUTS_NAME]))
+
+n.total - n.nosamp # Number of regions included in the sample
+1 - n.nosamp / n.total # Proportion of regions included
+```
+
+### Across the first 5 waves
+```{r}
+dt.count <- dt.part[wave <= 5, .(N = length(unique(new_id))), by = .(wave, NUTS_NAME)]
+
+plot_ss_map_by_wave <- function(.wave){
+  tmp <- merge(dt.spdf[LEVL_CODE == 3], dt.count[wave == .wave], all.x = TRUE, by = 'NUTS_NAME')
+  ggplot() + 
+    geom_polygon(data = tmp, aes(LONG, LAT, group = NUTS_ID, fill = N)) + 
+    coord_map() + 
+    viridis::scale_fill_viridis(option = 'H', na.value = "gray80", limits = c(0, max(dt.count$N))) +
+    labs(subtitle = paste("Wave", .wave)) + 
+    theme_void() + 
+    theme(plot.subtitle = element_text(hjust = 0.5))
+}
+
+plt.list <- map(1:5, plot_ss_map_by_wave) # Plot the first 5 waves
+
+plt.list[[1]] + plt.list[[2]] + plt.list[[3]] + plt.list[[4]] + plt.list[[5]] + guide_area() + 
+  plot_layout(guides = "collect", nrow = 2, ncol = 3)
+
+ggsave("../figures/first5-sample-size.png", units = "cm", height = 12.09, width = 15.45) # Save fig.
+```
+
+### Sample size per region
+```{r}
+dt.count <- dt.part[, .(N = length(unique(new_id))), by = NUTS_NAME]
+plt.ss.covimod <- ggplot(dt.count, aes(x = N)) + 
+  geom_histogram(binwidth = 5) + 
+  labs(x = "Sample size", y = "Frequency",
+       title = "Sample Size by NUTS-3",
+       subtitle = "Pooled across all 33 waves")
+
+dt.census.agg <- dt.census[LEVL_CODE == 3, .(Population = sum(POP),
+                                             URBN_TYPE = unique(URBN_TYPE)), by=NUTS_NAME]
+plt.ps.germany <- ggplot(dt.census.agg) + 
+  geom_histogram(aes(x = Population), binwidth = 5e4) + 
+  labs(x = "Population size", y = "Frequency",
+       title = "German Population Census",
+       subtitle = 2011)
+
+plt.ss.covimod + plt.ps.germany
+
+ggsave("../figures/pooled-sample-size.png", units = "cm", height = 12.09, width = 15.45) # Save fig
+```
+
+Top 5 regions
+```{r}
+dt.count[order(-N)]
+
+dt.census.agg[order(-Population)]
+```
+```{r}
+tmp <- merge(dt.census.agg, dt.count, all.x = TRUE, by = "NUTS_NAME")
+tmp[is.na(N), N := 0]
+tmp[, Proportion := N / sum(N) * 100]
+tmp[, URBN_TYPE := fcase(URBN_TYPE == 1, "Urban",
+                         URBN_TYPE == 2, "Intermediate",
+                         URBN_TYPE == 3, "Rural")]
+tmp$URBN_TYPE <- ordered(tmp$URBN_TYPE, levels = c("Urban", "Intermediate", "Rural"))
+
+ggplot(tmp) + 
+  geom_point(aes(Population, N, size = Proportion, color = URBN_TYPE), alpha = 0.7) + 
+  scale_color_manual(values = c("#ef5675", "#ffa600", "#7a5195")) + 
+  labs(y = "COVIMOD Sample Size", x = "Population (2011 Census)",
+       size = "Proportion of\nCOVIMOD Sample", color = "Urban Type",
+       title = "COVIMOD Sample Size v.s. 2011 German Population",
+       subtitle = "Pooled across all 33 waves")
+
+ggsave("../figures/sample-size-bubble.png", units = "cm", height = 12.09, width = 15.45) # Save fig
+```
+
+Cumulative proportion of the sample 
+```{r}
+dt.count <- dt.count[order(-N)]
+dt.count[, CS := cumsum(N) / sum(N) * 100]
+```
+
+```{r}
+dt.spdf.lev3 <- dt.spdf[LEVL_CODE == 3]
+dt.spdf.lev3[, URBN_TYPE := fcase(URBN_TYPE == 1, 'Urban',
+                                  URBN_TYPE == 2, 'Intermediate',
+                                  URBN_TYPE == 3, 'Rural',
+                                  default = NA)]
+
+dt.spdf.lev3$URBN_TYPE <- factor(dt.spdf.lev3$URBN_TYPE, levels = c('Urban', 'Intermediate', 'Rural'))
+
+ggplot() + 
+  geom_polygon(data = dt.spdf.lev3, aes(LONG, LAT, group = NUTS_ID, fill = factor(URBN_TYPE))) + 
+  coord_map() + 
+  scale_fill_manual(values = c("#ef5675", "#ffa600", "#7a5195")) + 
+  labs(title = "Map of Germany", subtitle = "Colored by Urban Type", fill = 'Urban type') + 
+  theme_void() + 
+  theme(legend.position = 'right')
+
+ggsave("../figures/map-of-germany-urban-type.png", units = "cm", height = 12.09, width = 15.45) # Save fig
+```
+
+## Stratifying by Urban Rural Typology
+### The age distribution of participants by urban rural classification
+```{r}
+dt.urban.type <- unique(dt.spdf.lev3[, .(NUTS_NAME, URBN_TYPE)])
+dt.part <- merge(dt.part, dt.urban.type, all.x = TRUE, by = 'NUTS_NAME') # Add urban classification info
+tmp <- dt.part[, .(age= unique(imp_age)), by = .(new_id, URBN_TYPE)]
+plt.agedist.covimod <- ggplot(tmp, aes(age, fill = URBN_TYPE)) + 
+  geom_density(alpha = 0.7, bw = 1) + 
+  scale_fill_manual(values = c("#ef5675", "#ffa600", "#7a5195")) + 
+  scale_x_continuous(expand = c(0,0)) + 
+  labs(x = "Age of participant", y = "Density", fill = "")
+ggsave('../figures/agedist-covimod.png', plot = plt.agedist.covimod,
+       units = "cm", height = 10.46, width = 15.14)
+
+tmp <- dt.census[LEVL_CODE == 3, .(POP = sum(POP)), by = .(URBN_TYPE, AGE)]
+tmp <- tmp[, DENSITY := POP / sum(POP), by = URBN_TYPE]
+tmp[, URBN_TYPE := fcase(URBN_TYPE == 1, 'Urban',
+                         URBN_TYPE == 2, 'Intermediate',
+                         URBN_TYPE == 3, 'Rural',
+                         default = NA)]
+tmp$URBN_TYPE <- ordered(tmp$URBN_TYPE, levels = c('Urban', 'Intermediate', 'Rural'))
+
+plt.agedist.germany <- ggplot(tmp, aes(AGE, DENSITY, fill = URBN_TYPE)) + 
+  geom_line() + 
+  geom_ribbon(aes(ymin = 0, ymax = DENSITY), alpha = 0.7) + 
+  scale_fill_manual(values = c("#ef5675", "#ffa600", "#7a5195")) + 
+  scale_x_continuous(expand = c(0,0)) + 
+  labs(x = "Age", y = "Density", fill = "")
+ggsave('../figures/agedist-germany.png', plot = plt.agedist.germany,
+       units = "cm", height = 10.46, width = 15.14)
+```
+
+### The number of people in the household by urban rural typology
+```{r}
+tmp <- dt.part[, .(hh_p_incl = unique(hh_p_incl_0)), by = .(new_id, URBN_TYPE)]
+tmp <- tmp[, .(N = .N), by = .(URBN_TYPE, hh_p_incl)]
+tmp[, prop := N / sum(N), by = URBN_TYPE]
+
+ggplot(tmp, aes(hh_p_incl)) + 
+  geom_bar(aes(y = prop, fill = URBN_TYPE), position = 'dodge', stat = 'identity') + 
+  scale_fill_manual(values = c("#ef5675", "#ffa600", "#7a5195")) + 
+  scale_x_continuous(breaks = seq(1, 12)) + 
+  labs(x = "Number of ppl. in the household", y = "Proportion", fill = "") +
+  theme(panel.grid.minor = element_blank())
+
+ggsave('../figures/housedist.png',
+       units = "cm", height = 12.09, width = 15.14)
+```
+
+### Proportion of household and non-household contacts
+
+We begin by calculating the number of household contacts for each wave stratified by urban rural typology.
+```{r}
+tmp <- merge(dt.hh, dt.part, all.x = TRUE, by = c("new_id", "wave"))
+dt.hh.agg <- tmp[, .(COUNT = sum(hh_met_this_day, na.rm = T)), by = .(wave, URBN_TYPE)]
+dt.hh.agg[, TYPE := "Household"]
+```
+
+Next we calculate the number of non-household contacts for each wave stratified by urban rural typology
+```{r}
+tmp <- merge(dt.nhh, dt.part, all.x = TRUE, by = c("new_id", "wave"))
+dt.nhh.agg <- tmp[, .(COUNT = .N), by = .(wave, URBN_TYPE)]
+dt.nhh.agg[, TYPE := "Non-household"]
+```
+
+Finally, we calculate the number of group contacts
+```{r}
+SDcols_Q75 <- c("Q75_u18_work", "Q75_u18_school", "Q75_u18_else", 
+                "Q75_1864_work", "Q75_1864_school", "Q75_1864_else",
+                "Q75_o64_work", "Q75_o64_school", "Q75_o64_else")
+
+dt.part[, y_grp := rowSums(.SD, na.rm = T), .SDcols = SDcols_Q75]
+dt.part[y_grp > 60, y_grp := 60]
+
+dt.grp.agg <- dt.part[, .(COUNT = sum(y_grp)), by=.(wave, URBN_TYPE)]
+dt.grp.agg[, TYPE := "Non-household"]
+```
+
+We will bind the three different tables together
+```{r}
+dt.agg <- rbind(dt.hh.agg, dt.nhh.agg, dt.grp.agg)
+dt.agg <- dt.agg[, .(COUNT = sum(COUNT)), by = .(wave, URBN_TYPE, TYPE)]
+```
+
+and plot them
+```{r}
+ggplot(dt.agg[TYPE == "Household"], aes(x = wave, y = PROP)) + 
+  geom_point(aes(color = URBN_TYPE), alpha = 0.4) + 
+  geom_smooth(aes(color = URBN_TYPE), span = 0.3, se = FALSE) + 
+  scale_x_continuous(expand = c(0, 0), breaks = seq(1,33,4)) + 
+  scale_y_continuous(limits = c(0, 1)) + 
+  scale_colour_manual(values = c("#ef5675", "#ffa600", "#7a5195")) + 
+  labs(x = "COVIMOD wave", y = "Proportion",
+       color = "", title = "Proportion of household contacts",
+       subtitle = "by COVIMOD survey wave")
+
+ggsave('../figures/hh-contact-prop.png',
+       units = "cm", height = 12.09, width = 15.14)
+```
+
+## Characteristics of Household contacts
+### Expected v.s. Actual number of household contacts
+```{r}
+tmp <- merge(dt.hh, dt.part, all.x = TRUE, by = c("new_id", "wave"))
+tmp <- tmp[, .(EXP_COUNT = .N,
+               ACT_COUNT = sum(hh_met_this_day, na.rm = T),
+               URBN_TYPE = unique(URBN_TYPE)), 
+             by = .(new_id, wave)]
+
+tmp <- tmp[, .(Expected = mean(EXP_COUNT),
+               Actual = mean(ACT_COUNT)), 
+           by = .(wave, URBN_TYPE)]
+
+tmp <- melt(tmp, id.vars = c("wave", "URBN_TYPE"), 
+            variable.name = 'TYPE',
+            value.name = 'AVG')
+
+ggplot(tmp, aes(wave, AVG)) + 
+  geom_line(aes(color = TYPE)) +
+  scale_y_continuous(limits = c(1, 2.5)) + 
+  facet_grid(~URBN_TYPE) + 
+  labs(title = "Expected vs Actual HH Contacts",
+       subtitle = "Average for each COVIMOD wave",
+       x = "Wave", y = "Average contacts", color = "") + 
+  theme(strip.background = element_blank(),
+        legend.position = "bottom",
+        legend.margin = margin(t = -10))
+
+ggsave('../figures/hh-contact-exp-act.png',
+       units = "cm", height = 12.09, width = 15.14)
+```
+
+### Age difference between participant and household members that didnt meet
+```{r}
+dt.hh[, alter_age_strata_min := stringr::str_extract(alter_age_strata, "^([0-9]{1,2})")]
+dt.hh[, alter_age_strata_max := stringr::str_extract(alter_age_strata, "([0-9]{1,2})$")]
+
+dt.hh[, alter_age_strata_min := as.numeric(alter_age_strata_min)]
+dt.hh[, alter_age_strata_max := as.numeric(alter_age_strata_max)]
+
+dt.hh[, alter_age_strata_med := (alter_age_strata_min + alter_age_strata_max) / 2]
+
+tmp <- merge(dt.hh, dt.part, all.x = T, by = c("new_id", "wave"))
+tmp[, age_diff := abs(alter_age_strata_med - imp_age)]
+tmp[, hh_met_this_day := ifelse(hh_met_this_day == 0, "Didn't meet", "Met")]
+
+ggplot(tmp[!is.na(hh_met_this_day)], aes(age_diff)) + 
+  geom_histogram(aes(y=..density..), binwidth = 2) + 
+  facet_grid(~hh_met_this_day) + 
+  labs(x = "Age difference between participant and contact",
+       y = "Density", title = "Age diff between participant\nand HH member met / didn't meet",
+       subtitle = "Pooled across all 33 waves") + 
+  theme(
+    strip.background = element_blank()
+  )
+
+ggsave('../figures/hh-contact-met-notmet.png',
+       units = "cm", height = 12.09, width = 15.14)
+```
+
+
+

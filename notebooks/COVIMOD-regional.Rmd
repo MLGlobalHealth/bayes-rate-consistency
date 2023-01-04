@@ -47,17 +47,16 @@ dt.pop <- age_stratify(dt.pop)
 ## Sample size analysis
 ### Number of survey participants by residence
 ```{r}
-dt.part[wave == 1, .(N = .N), by = .(form)]
-dt.part[wave == 1, .(N = .N), by = .(form, imp_age)]
+dt.part[wave == 2, .(N = .N), by = .(form)]
 ```
 ### Number of observed contacts by residence and type
 ```{r}
-tmp <- dt.hh[wave == 1 & hh_met_this_day == 1]
+tmp <- dt.hh[wave == 2 & hh_met_this_day == 1]
 tmp <- merge(tmp, dt.part, by = c("new_id", "wave"), all.x = TRUE)
 su.hh <- tmp[, .(N = .N), by = .(form)]
 su.hh[, type := "household"]
 
-tmp <- dt.nhh[wave == 1]
+tmp <- dt.nhh[wave == 2]
 tmp <- merge(tmp, dt.part, by = c("new_id", "wave"), all.x = TRUE)
 su.nhh <- tmp[, .(N = .N), by = .(form)]
 su.nhh[, type := "non-household"]
@@ -69,6 +68,36 @@ setcolorder(su, c("form", "type", "N"))
 su[, prop := N / sum(N), by = form]
 su
 ```
+Analysis by time
+```{r}
+tmp <- dt.hh[hh_met_this_day == 1]
+tmp <- merge(tmp, dt.part, by = c("new_id", "wave"), all.x = TRUE)
+su.hh <- tmp[, .(N = .N), by = .(wave, form)]
+su.hh[, type := "household"]
+
+tmp <- dt.nhh
+tmp <- merge(tmp, dt.part, by = c("new_id", "wave"), all.x = TRUE)
+su.nhh <- tmp[, .(N = .N), by = .(wave, form)]
+su.nhh[, type := "non-household"]
+
+su <- rbind(su.hh, su.nhh)
+setkey(su, form, type)
+setcolorder(su, c("form", "type", "N"))
+
+su[!is.na(form), prop := N / sum(N), by = .(wave, form)]
+
+ggplot(su[!is.na(form)], aes(wave, prop)) +
+  geom_line(aes(color = form)) + 
+  facet_wrap(~type) + 
+  scale_color_manual(values = c("#101820FF", "#F2AA4CFF")) + 
+  labs(x = "Wave", y = "Proportion", color = "") + 
+  theme(
+    strip.background = element_blank(),
+    legend.position = "bottom",
+    legend.margin = margin()
+  )
+```
+
 
 ## Distribution of contacts
 ### Average number of contacts by region
@@ -103,22 +132,80 @@ ggplot(tmp, aes(age_strata, contacts, color = form)) +
   )
 ```
 
+### Household composition
 ```{r}
-# Household
-tmp <- dt.hh[wave == 1 & hh_met_this_day == 1]
-tmp <- merge(tmp, dt.part, all.x = TRUE, by = c("new_id", "wave"))
-tmp.hh <- tmp[, .(N = .N), by = .(form, imp_age, alter_age_strata)]
+tmp <- dt.part[wave == 1, .(N = .N), by = c("form", "hh_p_incl_0")]
+tmp[, prop := N/sum(N), by = form]
 
+ggplot(tmp, aes(x = factor(hh_p_incl_0), y = prop)) + 
+  geom_bar(stat = "identity") + 
+  facet_wrap(~form) + 
+  labs(x = "No. of people in the household", y = "Proportion") + 
+  theme(
+    strip.background = element_blank()
+  )
+```
+
+## Experiments using the BRC model
+
+**Experiment Parameters**
+```{r}
+expParams <- list(wave = 1)
+```
+
+### Household contacts
+Here we summarise household contacts by urban/rural, participant age, and contact age group.
+```{r}
+tmp <- dt.hh[wave == expParams['wave'] & hh_met_this_day == 1]
+tmp <- merge(tmp, dt.part, all.x = TRUE, by = c("new_id", "wave"))
+hh <- tmp[, .(N = .N), by = .(form, imp_age, alter_age_strata)]
+
+print(sum(hh$N)) # Print the total number of contacts
+```
+
+### Non-household contacts
+Here we summarise the non-household contacts
+```{r}
 # Non household
-tmp <- dt.nhh[wave == 1]
+tmp <- dt.nhh[wave == expParams['wave']]
 tmp <- merge(tmp, dt.part, all.x = TRUE, by = c("new_id", "wave"))
-tmp.nhh <- tmp[, .(N = .N), by = .(form, imp_age, alter_age_strata)]
 
-# Merge
-tmp <- rbind(tmp.hh, tmp.nhh)
+# Identify entries with missing age information
+tmp.missing.age <- tmp[is.na(alter_age_strata)]
+nhh.missing <- tmp.missing.age[, .(N_missing = .N), by = .(form, imp_age)]
+
+tmp <- tmp[!is.na(alter_age_strata)]
+nhh <- tmp[, .(N = .N), by = .(form, imp_age, alter_age_strata)]
+
+cat("Non-household contacts: ", sum(nhh$N), "\n")
+cat("Non-household missing contacts: ", sum(nhh.missing$N), "\n")
+```
+
+Calculate offsets
+```{r}
+tmp <- rbind(hh, nhh)
+tmp <- tmp[, .(N_contact = sum(N)), by = .(form, imp_age)]
+tmp <- merge(tmp, nhh.missing, all.x = TRUE, by = c("form", "imp_age"))
+tmp <- tmp[!is.na(form) & !is.na(imp_age)]
+tmp[is.na(N_missing), N_missing := 0]
+
+tmp[, S := N_contact / (N_contact + N_missing)]
+off <- tmp[, .(form, imp_age, S)]
+setnames(off, "imp_age", "age")
+```
+
+### Merging household and non-household data, creating offsets
+```{r}
+tmp <- rbind(hh, nhh)
 tmp <- tmp[, .(N_contact = sum(N)), by = .(form, imp_age, alter_age_strata)]
 setnames(tmp, "imp_age", "age")
 
+cat("Total number of observed contacts:", sum(tmp$N_contact, na.rm = T))
+
+
+age.groups <- c("0-4","5-9","10-14","15-19","20-24","25-34","35-44",
+                         "45-54","55-64","65-69","70-74","75-79","80-84")
+# Create a grid
 grid <- as.data.table(
   expand.grid(
     form = c("Urban", "Rural"),
@@ -127,28 +214,41 @@ grid <- as.data.table(
                          "45-54","55-64","65-69","70-74","75-79","80-84")
   )
 )
+```
 
+```{r}
 # Participant sample size
-tmp.part <- dt.part[wave == 1, .(N_part = .N), by = .(form, imp_age)]
+tmp.part <- dt.part[wave == expParams['wave'], .(N_part = .N), by = .(form, imp_age)]
 setnames(tmp.part, "imp_age", "age")
+
+cat("Number of participants: ", sum(tmp.part$N_part))
 
 # Population size
 tmp.pop <- dt.pop[, .(N_pop = sum(pop)), by = .(age_strata)]
 
 # Combine everything
-tmp <- merge(grid, tmp, all.x = TRUE)
+tmp <- merge(grid, tmp, all.x = TRUE, by = c("form", "age", "alter_age_strata"))
 tmp <- merge(tmp, tmp.part, all.x = TRUE, by = c("form", "age"))
 tmp <- merge(tmp, tmp.pop, all.x = TRUE, by.x = "alter_age_strata", by.y = "age_strata")
+tmp <- merge(tmp, off, all.x = TRUE, by = c("form", "age"))
+```
 
-tmp[N_part > 0 & is.na(N_contact), N_contact := 0]
-tmp[, m := N_contact / N_part]
-tmp <- tmp[!is.na(N_part)]
+Impute true zeros and offsets
+```{r}
+tmp[is.na(N_contact) & N_part > 0, N_contact := 0]
+tmp[is.na(N_part), N_part := 1]
+tmp[is.nan(S) | is.na(S), S := 1]
+```
+
+Calculate crude contact intensity
+```{r}
+tmp[, m := N_contact / N_part / S]
 ```
 
 ```{r}
 ggplot(tmp, aes(age, alter_age_strata)) + 
   geom_tile(aes(fill = m)) + 
-  viridis::scale_fill_viridis(option = "H") + 
+  viridis::scale_fill_viridis(option = "H", limits = c(0, 3)) + 
   scale_x_continuous(expand = c(0,0), na.value = "white") + 
   scale_y_discrete(expand = c(0,0), na.value = "white") +
   labs(x = "Age of contacting individuals", y = "Age of contacts", fill = "Intensity") + 
@@ -164,7 +264,7 @@ ggplot(tmp, aes(age, alter_age_strata)) +
 Compile Stan model
 ```{r}
 library(cmdstanr)
-model <- cmdstan_model("~/bayes-rate-consistency/stan_models/regional/hsgp-m52-rd.stan")
+model <- cmdstan_model("~/bayes-rate-consistency/stan_models/regional/hsgp-m52-rd.stan", compile = TRUE)
 ```
 
 Configure Stan data
@@ -172,8 +272,8 @@ Configure Stan data
 source("~/bayes-rate-consistency/R/stan-utility.R")
 
 stan_data <- list(
-  N_U = nrow(tmp[form == "Urban"]),
-  N_R = nrow(tmp[form == "Rural"]),
+  N_U = nrow(tmp[!is.na(N_contact) & form == "Urban"]),
+  N_R = nrow(tmp[!is.na(N_contact) & form == "Rural"]),
   A = 85,
   C = 13
 )
@@ -184,23 +284,26 @@ tmp[, age_idx := age + 1]
 tmp[, age_strata_idx := as.numeric(alter_age_strata)]
 tmp[, row_major_idx := (age_idx-1)*13 + age_strata_idx]
 
-stan_data$ROW_MAJOR_IDX_U <- tmp[form == "Urban", row_major_idx]
-stan_data$ROW_MAJOR_IDX_R <- tmp[form == "Rural", row_major_idx]
+stan_data$ROW_MAJOR_IDX_U <- tmp[!is.na(N_contact) & form == "Urban", row_major_idx]
+stan_data$ROW_MAJOR_IDX_R <- tmp[!is.na(N_contact) & form == "Rural", row_major_idx]
 
 # Add contact counts
-stan_data$Y_U <- tmp[form == "Urban", N_contact]
-stan_data$Y_R <- tmp[form == "Rural", N_contact]
+stan_data$Y_U <- tmp[!is.na(N_contact) & form == "Urban", N_contact]
+stan_data$Y_R <- tmp[!is.na(N_contact) & form == "Rural", N_contact]
 
 # Add offsets
 grid <- as.data.table(expand.grid(age = seq(0,84), form = c("Urban", "Rural")))
 
 tmp.offsets <- merge(grid, tmp.part, all.x = T)
+tmp.offsets <- merge(tmp.offsets, off, all.x = T, by = c("age", "form"))
 tmp.offsets[is.na(N_part), N_part := 1]
+tmp.offsets[is.na(S), S := 1]
+
 stan_data$log_N_U <- log(tmp.offsets[form == "Urban", N_part])
 stan_data$log_N_R <- log(tmp.offsets[form == "Rural", N_part])
 
-stan_data$log_S_U <- log(rep(1, 85))
-stan_data$log_S_R <- log(rep(1, 85))
+stan_data$log_S_U <- log(tmp.offsets[form == "Urban", S])
+stan_data$log_S_R <- log(tmp.offsets[form == "Rural", S])
 
 stan_data$log_P <- log(dt.pop[age < 85, .(pop = sum(pop)), by=age]$pop)
 
@@ -218,7 +321,7 @@ model_inits <- function(){
   list(
     beta_0 = beta_0 + rnorm(1, 0, 0.2),
     z = rnorm(1, 0, 0.01),
-    nu = 0.4 + rnorm(1, 0, 0.01)
+    nu = 0.7 + rnorm(1, 0, 0.01)
   ) 
 }
 ```
@@ -227,11 +330,11 @@ model_inits <- function(){
 Run the Stan model
 ```{r}
 fit <- model$sample(
-  data = stan_data, seed = 123, 
+  data = stan_data, seed = 721, 
   chains = 2, iter_warmup = 500, iter_sampling = 500,
   parallel_chains = 2,
   init = model_inits,
-  refresh = 25
+  refresh = 50
 )
 ```
 
@@ -251,59 +354,6 @@ fit$summary(variables = c("beta_0", "gp_alpha", "gp_rho_1", "gp_rho_2", "nu"))
 ```
 
 Extract posterior contact intensities by residence type
-```{r}
-ps <- c(0.5, 0.025, 0.975)
-p_labs <- c('M','CL','CU')
-
-po <- fit$draws("log_cnt_rate", format = "draws_matrix")
-dt.po <- as.data.table(reshape2::melt(po))
-
-# Extract indices
-.pattern <- "log_cnt_rate\\[([0-9]+),([0-9]+),([0-9]+)\\]"
-
-dt.po[, region_idx := as.numeric(gsub(.pattern, "\\1", variable))]
-dt.po[, age_idx := as.numeric(gsub(.pattern, "\\2", variable))]
-dt.po[, alter_age_idx := as.numeric(gsub(.pattern, "\\3", variable))]
-
-# Calculate quantiles
-dt.po <- dt.po[, list(q=quantile(value, prob=ps, na.rm=T), q_label = p_labs),
-                      by=list(region_idx, age_idx, alter_age_idx)]
-dt.po <- data.table::dcast(dt.po, region_idx + age_idx + alter_age_idx ~ q_label, value.var = "q")
-
-# Convert back to rates
-dt.po[, M := exp(M)]
-dt.po[, CL := exp(CL)]
-dt.po[, CU := exp(CU)]
-
-dt.po[, age := age_idx - 1]
-dt.po[, alter_age := alter_age_idx - 1]
-      
-    # Recover gender and alter gender
-dt.po[, form := ifelse(region_idx == 1, "Urban", "Rural")]
-
-# Load datasets
-dtp <- dt.pop[age < 85, .(pop = sum(pop)), by = age]
-dt.po <- merge(dt.po, dtp, by.x="alter_age", by.y = "age", all.x = TRUE)
-
-dt.po[, intensity_M := M * pop]
-dt.po[, intensity_CL := CL * pop]
-dt.po[, intensity_CU := CU * pop]
-```
-
-```{r}
-ggplot(dt.po, aes(age, alter_age)) + 
-  geom_tile(aes(fill = intensity_M)) + 
-  coord_equal(expand=0) +
-  viridis::scale_fill_viridis(option = "H") + 
-  labs(x = "Age of contacting individuals", y = "Age of contacts", fill = "intensity") + 
-  facet_wrap(~form) + 
-  theme(
-    strip.background = element_blank(),
-    legend.position = "bottom",
-    legend.margin = margin()
-  )
-```
-
 ```{r}
 extract_posterior_intensity <- function(po, dt.pop){
   po <- subset(po, "log_cnt_rate")
@@ -334,22 +384,76 @@ extract_posterior_intensity <- function(po, dt.pop){
 
   return(dt.po)
 }
+```
 
-dt.po <- extract_posterior_intensity(fit$draws("log_cnt_rate", format = "matrix"), dtp)
+
+```{r}
+dtp <- dt.pop[, .(pop = sum(pop)), by = age]
+dt.po <- extract_posterior_intensity(fit$draws("log_cnt_rate", format = "draws_matrix"), dtp)
+
+ps <- c(0.5, 0.025, 0.975)
+p_labs <- c('M','CL','CU')
+
+# Calculate quantiles
+dt.po <- dt.po[, list(q=quantile(value, prob=ps, na.rm=T), q_label = p_labs),
+                      by=list(form, age, alter_age)]
+dt.po <- data.table::dcast(dt.po, form + age + alter_age ~ q_label, value.var = "q")
 ```
 
 ```{r}
-dt <- dt.po[, .(value = sum(value)), by=c("draw", "age", "form")]
-dt <- dt[, list( q=quantile(value, prob=ps, na.rm=T), q_label = p_labs), by=c("age", "form")]
-dt <- data.table::dcast(dt, age + form ~ q_label, value.var = "q")
+ggplot(dt.po, aes(age, alter_age)) + 
+  geom_tile(aes(fill = M)) + 
+  coord_equal(expand=0) +
+  viridis::scale_fill_viridis(option = "H") + 
+  labs(x = "Age of contacting individuals", y = "Age of contacts", fill = "intensity") + 
+  facet_wrap(~form) + 
+  theme(
+    strip.background = element_blank(),
+    legend.position = "bottom",
+    legend.margin = margin()
+  )
+```
 
-ggplot(dt, aes(age, M)) + 
+```{r}
+po <- fit$draws("yhat_strata", format = "draws_matrix")
+dt.po <- as.data.table(reshape2::melt(po))
+
+# Extract indices
+.pattern <- "yhat_strata\\[([0-9]+),([0-9]+),([0-9]+)\\]"
+
+dt.po[, region_idx := as.numeric(gsub(.pattern, "\\1", variable))]
+dt.po[, age_idx := as.numeric(gsub(.pattern, "\\2", variable))]
+dt.po[, alter_age_idx := as.numeric(gsub(.pattern, "\\3", variable))]
+
+# Recover age and region
+dt.po[, age := age_idx - 1]
+dt.po[, alter_age_strata := age.groups[alter_age_idx]]
+dt.po[, form := ifelse(region_idx == 1, "Urban", "Rural")]
+
+# Calculate quantiles
+dt.po <- dt.po[, list(q=quantile(value, prob=ps, na.rm=T), q_label = p_labs),
+                      by=list(form, age, alter_age_strata)]
+dt.po <- data.table::dcast(dt.po, form + age + alter_age_strata ~ q_label, value.var = "q")
+
+dt.ppc <- merge(tmp, dt.po, all.x = TRUE, by = c("form", "age", "alter_age_strata"))
+dt.ppc[, inside.CI := N_contact >= CL & N_contact <= CU]
+
+mean(dt.ppc$inside.CI, na.rm = T)
+```
+
+
+```{r}
+dt.po <- extract_posterior_intensity(fit$draws("log_cnt_rate", format = "matrix"), dtp)
+dt.po <- dt.po[, .(value = sum(value)), by=c("draw", "age", "form")]
+dt.po <- dt.po[, list( q=quantile(value, prob=ps, na.rm=T), q_label = p_labs), by=c("age", "form")]
+dt.po <- data.table::dcast(dt.po, age + form ~ q_label, value.var = "q")
+
+ggplot(dt.po, aes(age, M)) + 
   geom_line(aes(color = form), size = 0.7) + 
   geom_ribbon(aes(ymin = CL, ymax = CU, fill = form), alpha = 0.3) + 
   scale_x_continuous(expand = c(0,0)) + 
-  scale_y_continuous(limits = c(0,10)) +
-  ggsci::scale_color_lancet() + 
-  ggsci::scale_fill_lancet() + 
+  ggsci::scale_color_d3() + 
+  ggsci::scale_fill_d3() + 
   labs(x = "Age of contacting individuals", y = "Contact intensity", color="", fill="") + 
   theme(
     legend.position = "bottom",
