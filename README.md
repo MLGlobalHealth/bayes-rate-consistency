@@ -24,21 +24,21 @@ Clone the repository to your chosen directory on your local machine.
 git clone git@github.com:MLGlobalHealth/bayes-rate-consistency.git
 ```
 
-Navigate to the repository within [RStudio](https://posit.co/downloads/) and click on the `covimod-gp.Rproj` to activate the project or run the following line of code with R. You will need to specify the path to the cloned repository.
-
-```{r}
-renv::activate("path/to/repository")
+### From the command line
+To install the required R libraries using the command line interface, navigate to the repository and run the following command
+```bash
+$ Rscript install-dependencies.R
 ```
 
-To install all required libraries, execute
+### From RStudio
+Navigate to the repository within [RStudio](https://posit.co/downloads/) and click on the `covimod-gp.Rproj` to activate the project from the Files window.
 
+Then, execute the following lines of code using the R console to install the required dependencies
 ```{r}
 renv::init()
 renv::restore()
 ```
-
 You may need to manually install some packages such as `cmdstanr`. If that is the case, please refer to: [Getting started with CmdStanR](https://mc-stan.org/cmdstanr/articles/cmdstanr.html).
 
 ## Running the models
-
 At the moment, we are unable to provide COVIMOD or POLYMOD data due to data agreement terms. However, the de-identified data is scheduled to be released in the near future and this repository will be updated accordingly. However, you can find a tutorial on how to run our simulation experiments in: `tutorials/running-simulations.Rmd`.
