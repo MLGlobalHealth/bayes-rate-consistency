@@ -1,0 +1,85 @@
+---
+title: "COVIMOD-Household-EDA"
+author: "Shozen Dan"
+date: "2023-02-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readr)
+library(data.table)
+library(ggplot2)
+
+# Load utility functions
+source('~/bayes-rate-consistency/R/covimod-utility.R')
+
+# Read the data
+covimod <- read_rds('../data/COVIMOD/COVIMOD_data_2022-12-29.rds')
+dt.part <- covimod$part
+dt.hh <- covimod$hh
+dt.nhh <- covimod$nhh
+dt.pop <- covimod$pop
+```
+
+```{r}
+dt_hh_size_count <- dt.part[order(wave, hh_p_incl_0), .(N = .N), by=.(wave, hh_p_incl_0)]
+dt_hh_size_count[, prop := N/sum(N), by=.(wave)]
+
+ggplot(dt_hh_size_count, aes(wave, prop)) + 
+  geom_area(aes(fill = ordered(hh_p_incl_0))) + 
+  scale_x_continuous(expand = c(0,0)) + 
+  scale_y_continuous(expand = c(0,0)) + 
+  labs(
+    title = "The proportion of participants by household size",
+    subtitle = "For all participants",
+    x = "COVIMOD wave", 
+    y = "Proportion", 
+    fill = "HH size"
+  ) + 
+  theme_bw() + 
+  theme()
+```
+If we look at the distribution of household size by time, the proportion of single and two-person households seems to be increasing gradually with time.
+
+
+```{r}
+setkey(dt.part, new_id, wave)
+dt.part[, R := 1:.N, by=new_id]
+
+dt_count_participation <- dt.part[, .(N = .N), by=new_id]
+multi_part_ids <- dt_count_participation[N > 1]$new_id
+
+dt_part_multi <- dt.part[new_id %in% multi_part_ids]
+tmp <- dt_part_multi[, .(N = .N), by=.(R, hh_p_incl_0)]
+tmp[, prop := N/sum(N), by=R]
+
+ggplot(tmp, aes(R, prop)) + 
+  geom_area(aes(fill = ordered(hh_p_incl_0))) +
+  scale_x_continuous(expand = c(0,0), limits = c(1,20)) + 
+  scale_y_continuous(expand = c(0,0)) + 
+  labs(
+    title = "The proportion of participants by household size",
+    subtitle = "For repeating participants",
+    x = "Number of repeated participation", 
+    y = "Proportion", 
+    fill = "HH size"
+  ) + 
+  theme_bw()
+```
+Can we say that the decrease in the reported household size is not due to reporting fatigue?
+
+
+```{r}
+dt.part[, multi_part := ifelse(new_id %in% multi_part_ids, T, F)]
+tmp <- dt.part[, .(N = .N), by=.(hh_p_incl_0, multi_part)]
+tmp[, prop := N/sum(N), by=multi_part]
+
+ggplot(tmp, aes(x=hh_p_incl_0, y=prop)) + 
+  geom_bar(aes(fill=ordered(multi_part)), stat = "identity", position = "dodge") + 
+  theme_bw()
+```
+

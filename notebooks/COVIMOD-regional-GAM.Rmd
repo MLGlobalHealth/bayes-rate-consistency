@@ -1,0 +1,119 @@
+
+```{r message=FALSE}
+# Load libraries
+library(readr)
+library(lubridate)
+library(data.table)
+library(ggplot2)
+library(rstan)
+library(brms)
+library(mgcv)
+
+# Load utility functions
+source('~/bayes-rate-consistency/R/covimod-utility.R')
+```
+
+```{r}
+# Load the COVIMOD data
+covimod <- read_rds('../data/COVIMOD/COVIMOD_data_2022-12-29.rds')
+dt.part <- covimod$part
+dt.hh <- covimod$hh
+dt.nhh <- covimod$nhh
+dt.pop <- covimod$pop
+
+dt.part <- impute_child_age(dt.part)
+```
+## Preprocess data
+### Process participant data
+```{r}
+# Obtain repeat index
+setkey(dt.part, new_id, wave, date)
+dt.part[, rep := 1:.N, by=new_id]
+dt.part[, rep := ifelse(rep > 5, 5, rep)]
+dt.part[, rep := ordered(rep)]
+```
+
+### Process household data
+```{r}
+dt.hh.sum <- dt.hh[, .(yhh = sum(hh_met_this_day, na.rm = TRUE)), by=.(wave, new_id)]
+```
+
+### Process non-household data
+```{r}
+dt.nhh.sum <- dt.nhh[, .(ynhh = .N), by=.(wave, new_id)]
+```
+
+### Process group-contacts
+```{r}
+SDcols_Q75 <- c("Q75_u18_work", "Q75_u18_school", "Q75_u18_else", 
+                "Q75_1864_work", "Q75_1864_school", "Q75_1864_else",
+                "Q75_o64_work", "Q75_o64_school", "Q75_o64_else")
+
+dt.part[, ygrp := rowSums(.SD, na.rm = T), .SDcols = SDcols_Q75]
+dt.part[ygrp > 60, ygrp := 60]
+```
+
+### Merge data
+```{r}
+dt.merged  <- dt.part[,.(new_id, wave, date, age_strata, gender, hh_p_incl_0, rep, ygrp)]
+dt.merged <- merge(dt.merged, dt.hh.sum, by=c("new_id", "wave"), all.x = TRUE)
+dt.merged <- merge(dt.merged, dt.nhh.sum, by=c("new_id", "wave"), all.x = TRUE)
+
+# Make time index
+dt.merged[, time_from_start := date - min(date)]
+dt.merged[, t := as.integer(time_from_start)]
+
+# Fill in zeros
+dt.merged[is.na(yhh), yhh := 0]
+dt.merged[is.na(ynhh), ynhh := 0]
+
+# Sum contacts
+dt.merged[, y := yhh + ynhh + ygrp]
+
+# Restrict to the first 10 waves
+dt.merged.w10 <- dt.merged[wave < 10]
+```
+
+## Build model
+```{r}
+if(!file.exists("../stan_fits/gam-m1.rds")){
+  # fit model
+  m1 <- brm(y ~ s(t, k=7, bs="cr") + age_strata + gender + rep + hh_p_incl_0 + (1|new_id), 
+          data = dt.merged.w10, 
+          family = poisson(),
+          chains = 2)
+  
+  # save model
+  saveRDS(m1, file = "../stan_fits/gam-m1.rds")
+} else {
+  m1 <- readRDS("../stan_fits/gam-m1.rds")
+}
+```
+
+```{r}
+# posterior predictive checks
+pp_check(m1)
+pp_check(m1, type = "loo_pit")
+```
+
+```{r}
+summary(m1)
+plot(conditional_smooths(m1), ask = FALSE)
+```
+
+```{r}
+# By urban rural region
+if(!file.exists("../stan_fits/gam-m1.rds")){
+  # fit model
+  m1 <- brm(y ~ s(t, k=7, bs="cr") + age_strata + gender + rep + hh_p_incl_0 + (1|new_id), 
+          data = dt.merged.w10, 
+          family = poisson(),
+          chains = 2)
+  
+  # save model
+  saveRDS(m1, file = "../stan_fits/gam-m1.rds")
+} else {
+  m1 <- readRDS("../stan_fits/gam-m1.rds")
+}
+```
+

@@ -24,6 +24,9 @@ source('~/bayes-rate-consistency/R/covimod-utility.R')
 
 # Set ggplot theme
 theme_set(theme_bw())
+
+FIG_WIDTH_CM <- 12
+FIG_HEIGHT_CM <- 7
 ```
 
 Load COVIMOD data
@@ -52,7 +55,7 @@ ggplot(dt.spdf[LEVL_CODE == 3]) +
   labs(title = "Map of Germany", subtitle = "Divided by NUTS-3 classification") +
   theme_void()
 
-ggsave("../figures/map-of-germany.png", units = "cm", height = 12.09, width = 15.45) # Save fig.
+ggsave("../figures/map-of-germany.png", units = "cm", height = FIG_HEIGHT_CM, width = FIG_WIDTH_CM) # Save fig.
 ```
 
 ## Sample size
@@ -272,6 +275,7 @@ We will bind the three different tables together
 ```{r}
 dt.agg <- rbind(dt.hh.agg, dt.nhh.agg, dt.grp.agg)
 dt.agg <- dt.agg[, .(COUNT = sum(COUNT)), by = .(wave, URBN_TYPE, TYPE)]
+dt.agg[, PROP := COUNT / sum(COUNT), by = .(wave, URBN_TYPE)]
 ```
 
 and plot them
@@ -350,5 +354,37 @@ ggsave('../figures/hh-contact-met-notmet.png',
        units = "cm", height = 12.09, width = 15.14)
 ```
 
+## Proportion of repeats
+```{r}
+dt.part[, rep := seq_len(.N), by=.(new_id)]
+dt.part[, rep := rep - 1]
+dt.part[, rep := ifelse(rep > 4, 4, rep)]
+
+tmp <- dt.part[, .(N = .N), by=.(wave, rep)]
+tmp[, pct := N/sum(N) * 100, by=wave]
+tmp$rep <- ordered(tmp$rep, labels = c('First time', '1', '2', '3', '4 or more'))
+
+ggplot(tmp, aes(wave, pct, fill = rep)) + 
+  geom_bar(stat = "identity", position = "fill") + 
+  scale_x_continuous(expand = c(0,0)) + 
+  scale_y_continuous(expand = c(0,0), labels = scales::percent_format()) + 
+  labs(x = 'Wave', y = 'Percentage of sample', fill = 'No. of repeat')
+```
+
+```{r}
+tmp2 <- dt.agg[, .(COUNT = sum(COUNT)), by=.(wave, TYPE)] # Proportion of household contacts and non-household contact by urban type
+tmp2[, PROP := COUNT / sum(COUNT), by = wave]
+tmp2 <- tmp2[TYPE == "Household"]
+
+tmp <- merge(tmp, tmp2, by = c("wave"))
+
+tmp[, logit := log(PROP/(1-PROP))]
+
+ggplot(tmp, aes(pct, logit)) +
+  geom_point(aes(color = rep), alpha = 0.4)
+```
+```{r}
+lm()
+```
 
 
