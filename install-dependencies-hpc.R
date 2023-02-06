@@ -14,14 +14,8 @@ if (require("renv")) {
   }
 }
 
-# Activate the project
-renv::activate(project = getwd())
-
-# Initialize a new project-local environment
-renv::init()
-
 # Restore the state of the project (i.e. install all dependencies)
-renv::restore()
+renv::restore(project = NULL, lockfile = "renv.lock")
 
 # Install cmdstanr and cmdstan
 cat(" Installing cmdstanr...")
