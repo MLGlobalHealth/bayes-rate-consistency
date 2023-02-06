@@ -53,5 +53,8 @@ data/COVIMOD/*
 data/POLYMOD/*
 data/simulations/datasets/*
 
+# Generated figures
+figures/*
+
 # Mac
 .DS_Store

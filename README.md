@@ -1,6 +1,5 @@
-# Bayesian Rate Consistency Model
-
-### for estimating high resolution human social contact patterns
+# bayes-rate-consistency
+[![License: CC BY 4.0](https://img.shields.io/badge/License-CC_BY_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/) [![arXiv](https://img.shields.io/badge/arXiv-2210.11358-b31b1b.svg)](https://arxiv.org/abs/2210.11358)
 
 ## About this repository
 
@@ -24,21 +23,34 @@ Clone the repository to your chosen directory on your local machine.
 git clone git@github.com:MLGlobalHealth/bayes-rate-consistency.git
 ```
 
-Navigate to the repository within [RStudio](https://posit.co/downloads/) and click on the `covimod-gp.Rproj` to activate the project or run the following line of code with R. You will need to specify the path to the cloned repository.
+#### For Imperial HPC users
+For those using Imperial's High Performance Computing Clusters, begin by following the instructions in the [Conda application guide](https://wiki.imperial.ac.uk/display/HPC/Conda) to setup Conda for your HPC account. Assuming you have done this, begin by creating an environment into which we will install the required R and dependencies.
+```shell
+module load anaconda3/personal
+conda create -n bayes-rate-consistency r-base=4.1.3 -c conda-forge
+source activate bayes-rate-consistency
+```
+Navigate to the root of the directory and execute `install-dependencies-hpc.R`
+```shell
+Rscript install-dependencies-hpc.R
+```
+This will install the required R libraries recorded in the `renv.lock` file and also install `cmdstanr` from source.
 
-```{r}
-renv::activate("path/to/repository")
+#### From the command line
+To install the required R libraries using the command line interface, navigate to the repository and run the following command
+```shell
+Rscript install-dependencies.R
 ```
 
-To install all required libraries, execute
+#### From RStudio
+Navigate to the repository within [RStudio](https://posit.co/downloads/) and click on the `covimod-gp.Rproj` to activate the project from the Files window.
 
-```{r}
+Then, execute the following lines of code using the R console to install the required dependencies
+```r
 renv::init()
 renv::restore()
 ```
-
 You may need to manually install some packages such as `cmdstanr`. If that is the case, please refer to: [Getting started with CmdStanR](https://mc-stan.org/cmdstanr/articles/cmdstanr.html).
 
 ## Running the models
-
 At the moment, we are unable to provide COVIMOD or POLYMOD data due to data agreement terms. However, the de-identified data is scheduled to be released in the near future and this repository will be updated accordingly. However, you can find a tutorial on how to run our simulation experiments in: `tutorials/running-simulations.Rmd`.
