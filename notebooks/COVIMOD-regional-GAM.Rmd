@@ -1,4 +1,5 @@
 
+## Setup
 ```{r message=FALSE}
 # Load libraries
 library(readr)
@@ -21,8 +22,13 @@ dt.hh <- covimod$hh
 dt.nhh <- covimod$nhh
 dt.pop <- covimod$pop
 
+# Load map data
+dt.spdf <- as.data.table( read_csv('../data/de-shapes.csv') )
+
+# Impute age
 dt.part <- impute_child_age(dt.part)
 ```
+
 ## Preprocess data
 ### Process participant data
 ```{r}
@@ -31,6 +37,22 @@ setkey(dt.part, new_id, wave, date)
 dt.part[, rep := 1:.N, by=new_id]
 dt.part[, rep := ifelse(rep > 5, 5, rep)]
 dt.part[, rep := ordered(rep)]
+
+# Merge with NUTS data
+dt.part <- merge(dt.part, 
+                 unique(dt.spdf[LEVL_CODE == 3, .(NUTS_NAME, URBN_TYPE)]), 
+                 by = "NUTS_NAME", 
+                 all.x=TRUE)
+
+# Convert LEVL_CODE to a factor
+dt.part[, urban_level := fcase(URBN_TYPE == 1, "Urban",
+                               URBN_TYPE == 2, "Intermediate",
+                               URBN_TYPE == 3, "Rural")]
+
+dt.part[, urban_level := factor(urban_level, levels = c("Urban", "Intermediate", "Rural"))]
+
+# Convert number of people in household to a factor
+dt.part[, num_ppl_hh := ordered(hh_p_incl_0)]
 ```
 
 ### Process household data
@@ -55,7 +77,7 @@ dt.part[ygrp > 60, ygrp := 60]
 
 ### Merge data
 ```{r}
-dt.merged  <- dt.part[,.(new_id, wave, date, age_strata, gender, hh_p_incl_0, rep, ygrp)]
+dt.merged  <- dt.part[,.(new_id, wave, date, age_strata, gender, hh_p_incl_0, num_ppl_hh, urban_level, rep, ygrp)]
 dt.merged <- merge(dt.merged, dt.hh.sum, by=c("new_id", "wave"), all.x = TRUE)
 dt.merged <- merge(dt.merged, dt.nhh.sum, by=c("new_id", "wave"), all.x = TRUE)
 
@@ -72,13 +94,16 @@ dt.merged[, y := yhh + ynhh + ygrp]
 
 # Restrict to the first 10 waves
 dt.merged.w10 <- dt.merged[wave < 10]
+
+# Drop NA
+dt.merged.w10 <- na.omit(dt.merged.w10)
 ```
 
 ## Build model
 ```{r}
 if(!file.exists("../stan_fits/gam-m1.rds")){
   # fit model
-  m1 <- brm(y ~ s(t, k=7, bs="cr") + age_strata + gender + rep + hh_p_incl_0 + (1|new_id), 
+  m1 <- brm(y ~ s(t, k=7, bs="cr") + age_strata + gender + urban_level + rep + hh_p_incl_0 + (1|new_id), 
           data = dt.merged.w10, 
           family = poisson(),
           chains = 2)
@@ -101,19 +126,180 @@ summary(m1)
 plot(conditional_smooths(m1), ask = FALSE)
 ```
 
+Let $Y_{it}$ be the total number of contacts by individual $i$ at time $t$. I assume that $Y_{it}$ follows a Poisson distribution with mean $\lambda_{it}$. The log of $\lambda_{it}$ is modeled by a linear equation consisting of: participant's age group parameter $\beta_{a(i)}$, gender parameter $\beta_{g(i)}$, household size parameter $\beta_{h(i,t)}$, number or repeated survey participation $\rho_{it}$, a smooth function of time which models the contact intensity by urban rural typology $\log m^{l(i)}(t)$, and an individual intercept term $\sigma_i$.
+$$ 
+\begin{split}
+Y_{it} & \sim \text{Poisson}(\lambda_{it}) \\
+\log \lambda_{it} &= \log m^{l(i)}(t) + \beta_{a(i)} + \beta_{g(i)} + \beta_{h(i,t)} + \rho_{it} + \sigma_i \\
+\log m^{l(i)}(t) &= \beta_0 + \beta_{l(i)} + f^{l(i)}(t)
+\end{split}
+$$
+
+
 ```{r}
 # By urban rural region
-if(!file.exists("../stan_fits/gam-m1.rds")){
+if(!file.exists("../stan_fits/gam-m2.rds")){
   # fit model
-  m1 <- brm(y ~ s(t, k=7, bs="cr") + age_strata + gender + rep + hh_p_incl_0 + (1|new_id), 
+  m2 <- brm(y ~ s(t, k=7, bs="cr", by=urban_level) + age_strata + gender + urban_level + rep + num_ppl_hh + (1|new_id), 
           data = dt.merged.w10, 
           family = poisson(),
           chains = 2)
   
   # save model
-  saveRDS(m1, file = "../stan_fits/gam-m1.rds")
+  saveRDS(m2, file = "../stan_fits/gam-m2.rds")
 } else {
-  m1 <- readRDS("../stan_fits/gam-m1.rds")
+  m2 <- readRDS("../stan_fits/gam-m2.rds")
 }
 ```
+
+```{r}
+# Convergence & mixing diagnositics
+print_min_ESS <- function(dataframe){
+  print(paste("Minimum Bulk ESS: ", min(dataframe$fixed$Bulk_ESS)))
+}
+
+print_max_Rhat <- function(dataframe){
+  print(paste("Maximum Rhat: ", max(dataframe$fixed$Rhat)))
+}
+
+print_mix_converge_diagnositcs <- function(brms_fit){
+  model_summary <- suppressWarnings(summary(brms_fit))
+  print_min_ESS(model_summary)
+  print_max_Rhat(model_summary)
+}
+
+print_mix_converge_diagnositcs(m2)
+```
+
+```{r}
+# Posterior predictive checks
+posterior_predictive_check <- function(brms_fit, data){
+  pp <- predict(brms_fit, summary = TRUE, probs = c(0.025, 0.975))
+
+  data[, CL := pp[,3]]
+  data[, CU := pp[,4]]
+  data[, inside_CI := ifelse(y >= CL & y <= CU, T, F)]
+
+  return(mean(data$inside_CI))
+}
+
+posterior_predictive_check(m2, dt.merged.w10)
+```
+
+```{r}
+conditional_posterior_pred <- function(object,
+                                       age_strata = "35-44", 
+                                       gender="Male", 
+                                       num_ppl_hh=4, 
+                                       urban_level="Urban", 
+                                       repeated=1){
+  
+  newdata <- expand.grid(age_strata=age_strata, 
+                         gender=gender, 
+                         num_ppl_hh=num_ppl_hh, 
+                         urban_level=urban_level, 
+                         rep=repeated,
+                         t=seq(1,133))
+  
+  epred <- posterior_epred(object, newdata, re_formula=NA)
+  
+  quantiles_pred <- apply(epred , 2 , quantile, probs = c(.025, .5, .975), na.rm = TRUE)
+  dt_pred <- data.table(t(quantiles_pred))
+  setnames(dt_pred, c("CL", "M", "CU"))
+  
+  set(dt_pred, i = NULL, "t", seq(1,133))
+  dt_pred$urban_level <- urban_level
+  dt_pred$rep <- repeated
+  dt_pred$num_ppl_hh <- num_ppl_hh
+  
+  return(dt_pred)
+}
+
+dt_pred_urban <- conditional_posterior_pred(m2, urban_level="Urban")
+dt_pred_intermediate <- conditional_posterior_pred(m2, urban_level = "Intermediate")
+dt_pred_rural <- conditional_posterior_pred(m2, urban_level = "Rural")
+
+dt_pred_all <- rbind(dt_pred_urban, dt_pred_intermediate, dt_pred_rural)
+dt_pred_all[, urban_level := factor(urban_level, levels = c("Rural", "Intermediate", "Urban"))]
+
+first_sample_date <- min(dt.part$date)
+dt_pred_all[, dt := first_sample_date + days(t-1)]
+
+dt_dates <- dt.part[wave < 10]
+dt_dates <- dt_dates[, .(start_date = min(date), end_date = max(date)), by=.(wave)]
+
+ggplot(dt_pred_all) + 
+  geom_rect(data = dt_dates, aes(xmin = start_date, xmax = end_date, ymin = 0, ymax = Inf),
+            inherit.aes = FALSE, alpha = 0.15) +
+  geom_ribbon(aes(dt, ymin = CL, ymax = CU, fill = urban_level), alpha=0.3) +
+  geom_line(aes(dt, M, color = urban_level), size=0.7) + 
+  scale_x_date(expand = c(0, 0)) + 
+  scale_y_continuous(limits = c(0,6)) + 
+  scale_color_manual(values = c("#003f5c","#ffa600", "#ef5675")) + 
+  scale_fill_manual(values = c("#003f5c", "#ffa600", "#ef5675")) + 
+  labs(x = "Date",
+       y = "Predicted No. of Contacts",
+       color = "Urban Level",
+       fill = "Urban Level") + 
+  theme_bw()
+```
+
+```{r}
+dt_pred_rep1 <- conditional_posterior_pred(m2, urban_level="Urban", repeated=1)
+dt_pred_rep2 <- conditional_posterior_pred(m2, urban_level="Urban", repeated=2)
+dt_pred_rep3 <- conditional_posterior_pred(m2, urban_level="Urban", repeated=3)
+dt_pred_rep4 <- conditional_posterior_pred(m2, urban_level="Urban", repeated=4)
+dt_pred_rep5 <- conditional_posterior_pred(m2, urban_level="Urban", repeated=5)
+
+dt_pred_rep_all <- rbind(dt_pred_rep1, dt_pred_rep2, dt_pred_rep3, dt_pred_rep4, dt_pred_rep5)
+
+dt_pred_rep_all[, rep := factor(rep)]
+
+ggplot(dt_pred_rep_all) + 
+  #geom_rect(data = dt_dates, aes(xmin = start_date, xmax = end_date, ymin = 0, ymax = Inf),
+  #          inherit.aes = FALSE, alpha = 0.15) +
+  geom_ribbon(aes(t, ymin = CL, ymax = CU, fill = rep), alpha=0.3) +
+  geom_line(aes(t, M, color = rep), size=0.7) + 
+  scale_x_continuous(expand = c(0, 0)) + 
+  scale_y_continuous(limits = c(0,6)) + 
+  #scale_color_manual(values = c("#003f5c","#ffa600", "#ef5675")) + 
+  #scale_fill_manual(values = c("#003f5c", "#ffa600", "#ef5675")) + 
+  labs(x = "Date",
+       y = "Predicted No. of Contacts",
+       color = "Number of repeats",
+       fill = "Number of repeats") + 
+  theme_bw()
+```
+
+```{r}
+dt_pred_hh1 <- conditional_posterior_pred(m2, urban_level="Urban", num_ppl_hh=1)
+dt_pred_hh2 <- conditional_posterior_pred(m2, urban_level="Urban", num_ppl_hh=2)
+dt_pred_hh3 <- conditional_posterior_pred(m2, urban_level="Urban", num_ppl_hh=3)
+dt_pred_hh4 <- conditional_posterior_pred(m2, urban_level="Urban", num_ppl_hh=4)
+dt_pred_hh5 <- conditional_posterior_pred(m2, urban_level="Urban", num_ppl_hh=5)
+
+dt_pred_hh_all <- rbind(dt_pred_hh1, 
+                        dt_pred_hh2, 
+                        dt_pred_hh3, 
+                        dt_pred_hh4, 
+                        dt_pred_hh5)
+
+dt_pred_hh_all[, num_ppl_hh := factor(num_ppl_hh)]
+
+ggplot(dt_pred_hh_all) + 
+  #geom_rect(data = dt_dates, aes(xmin = start_date, xmax = end_date, ymin = 0, ymax = Inf),
+  #          inherit.aes = FALSE, alpha = 0.15) +
+  geom_ribbon(aes(t, ymin = CL, ymax = CU, fill = num_ppl_hh), alpha=0.3) +
+  geom_line(aes(t, M, color = num_ppl_hh), size=0.7) + 
+  scale_x_continuous(expand = c(0, 0)) + 
+  scale_y_continuous(limits = c(0, NA)) + 
+  #scale_color_manual(values = c("#003f5c","#ffa600", "#ef5675")) + 
+  #scale_fill_manual(values = c("#003f5c", "#ffa600", "#ef5675")) + 
+  labs(x = "Date",
+       y = "Predicted No. of Contacts",
+       color = "Number of ppl in HH",
+       fill = "Number of ppl in HH") + 
+  theme_bw()
+```
+
 
