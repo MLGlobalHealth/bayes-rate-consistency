@@ -2,7 +2,9 @@
 
 cat("\n ---------- Begin Post-processing ---------- \n")
 
+# Load libraries
 library(optparse)
+library(yaml)
 library(data.table)
 library(cmdstanr)
 library(bayesplot)
@@ -12,92 +14,133 @@ library(stringr)
 library(ggplot2)
 library(pammtools)
 
+bayesplot::color_scheme_set(scheme = "mix-blue-pink")
+
+options(mc.cores=4)
+
 ##### ---------- I/O ---------- #####
+cat(" Loading experiment parameters ...\n")
+
+# Read CLI arguments (for batch jobs on the HPC)
 option_list <- list(
-  optparse::make_option("--repo_path", type = "character", default = "/rds/general/user/sd121/home/covimod-gp",
-                        help = "Absolute file path to repository directory [default]",
-                        dest = 'repo.path'),
-  optparse::make_option("--out_path", type = "character", default = "rds/general/user/sd121/home/covimod-gp",
-                        help = "The absolute file path to where the stan fits are saved",
-                        dest = "out.path"),
-  optparse::make_option("--model", type = "character", default = NA_character_,
-                        help = "Name of the model",
-                        dest = "model"),
-  optparse::make_option("--data", type = "character", default = NA_character_,
-                        help = "Name of the data directory under data/simulations/datasets/",
-                        dest = "data"),
-  optparse::make_option("--idx", type = "integer", default = NA_integer_,
-                        help = "PBD_JOB_IDX",
-                        dest = "idx")
+  make_option("--idx", type="integer", default=0,
+              help="PBD_JOB_IDX",
+              dest="idx")
 )
+cli_params <- parse_args(OptionParser(option_list = option_list))
 
-args <- optparse::parse_args(optparse::OptionParser(option_list = option_list))
+# Read experiment settings
+experiment_params <- read_yaml(file.path(getwd(), "settings/simulation.yml"))
 
-model.path <- file.path(args$out.path, "stan_fits", args$data, paste0(args$model, "_", args$idx, ".rds"))
-data.path <- file.path(args$repo.path, "data/simulations/datasets", args$data, paste0("data_", args$idx, ".rds"))
+# Source helpers
+repo_path <- experiment_params$repo_path
+source(file.path(repo_path, "R/convergence_diagnostic_stats.R"))
+source(file.path(repo_path, "R/sim_posterior_predictive_check.R"))
+source(file.path(repo_path, "R/sim_posterior_contact_intensity.R"))
+source(file.path(repo_path, "R/sim_prediction_error_table.R"))
+
+data_params <- experiment_params$data
+dataset_name <- paste(ifelse(data_params$covid, "inCOVID", "preCOVID"),
+                      data_params$size,
+                      data_params$strata,
+                      sep = "_")
+
+model_params <- experiment_params$model
+model_name <- paste(model_params$name,
+                    model_params$hsgp_m1,
+                    model_params$hsgp_m2,
+                    sep="-")
+
+fit_path <- file.path(experiment_params$out_path,
+                      "stan_fits",
+                      dataset_name,
+                      paste0(model_name, "-", cli_params$idx, ".rds"))
+
+data_path <- file.path(experiment_params$out_path,
+                       "data/simulations/datasets",
+                       dataset_name,
+                       paste0("data_", cli_params$idx, ".rds"))
 
 # Error handling
-if(!file.exists(model.path)) {
-  cat("\n Model: ", model.path)
+if(!file.exists(fit_path)) {
+  cat("\n Model: ", fit_path)
   stop("The specified model does not exist!")
 }
-if(!file.exists(data.path)) {
+if(!file.exists(data_path)) {
   stop("The specified dataset does not exists!")
 }
 
-# Output directories
-export.path <- file.path(args$out.path, "results", args$data, paste(args$model, args$idx, sep="_"))
-export.fig.path <- file.path(export.path, "figures")
-if(!dir.exists(export.path)){
-  dir.create(export.path, recursive = TRUE)
-  dir.create(export.fig.path)
+# Create export directory if it does not exist
+export_path <- file.path(experiment_params$out_path,
+                         "results",
+                         dataset_name,
+                         paste(model_name, cli_params$idx, sep="-"))
+export_fig_path <- file.path(export_path, "figures")
+if(!dir.exists(export_path)){
+  dir.create(export_path, recursive = TRUE)
+  dir.create(export_fig_path)
 } else {
-  if(!dir.exists(export.fig.path)){
-    dir.create(export.fig.path)
+  if(!dir.exists(export_fig_path)){
+    dir.create(export_fig_path)
   }
 }
 
 ##### ---------- Setup ---------- #####
-options(mc.cores=4)
-
-fit <- readRDS(model.path)
-dt <- readRDS(data.path)
-dt.pop <- unique(dt[, list(alter_age, alter_gender, pop)])
-setnames(dt.pop, c("alter_age", "alter_gender"), c("age", "gender"))
-
-source(file.path(args$repo.path, "R/sim-postprocess-diagnostic.R"))
+fit <- readRDS(fit_path)
+dt <- readRDS(data_path)
+dt_population <- unique(dt[, .(alter_age, alter_gender, pop)])
 
 ##### ---------- Assess convergence and mixing ---------- #####
-cat("\n Assess convergence and mixing \n")
+cat("\n Assess convergence and mixing...\n")
 
 # Make convergence diagnostic tables
-fit_summary <- make_convergence_diagnostic_stats(fit, outdir=export.path)
-pars <- c('nu', 'gp_alpha', 'gp_rho_1', 'gp_rho_2')
-pars_po <- fit$draws(pars)
+fit_summary <- convergence_diagnostic_stats(fit, outdir=export_path)
 
 # Make trace plots
 cat(" Making trace plots\n")
-bayesplot::color_scheme_set(scheme = "mix-blue-pink")
+
+pars <- c('nu', 'gp_alpha', 'gp_rho_1', 'gp_rho_2')
+pars_po <- fit$draws(pars)
 
 p <- bayesplot::mcmc_trace(pars_po)
-ggsave(file=file.path(export.fig.path, "trace.pdf"), plot=p, h=20, w=20, limitsize = F)
+ggsave(file = file.path(export_fig_path, "trace.pdf"),
+       plot = p,
+       h = 20, w = 20,
+       limitsize = F)
 
 # Make pairs plots
 cat(" Making pairs plots\n")
+
 p <- bayesplot::mcmc_pairs(pars_po, off_diag_args=list(size=0.3, alpha=0.3))
-ggsave(file=file.path(export.fig.path, "pairs.pdf"), plot=p, h=20, w=20, limitsize = F)
+ggsave(file = file.path(export_fig_path, "pairs.pdf"),
+       plot = p,
+       h = 20, w = 20,
+       limitsize = F)
 
 ##### ---------- Posterior predictive checks ---------- #####
-cat(" Posterior predictive checks\n")
-dt.ppc <- make_ppc(fit, dt, outdir = export.path) # Make posterior predictive checks
+
+cat(" Posterior predictive checks...\n")
+
+dt_ppc <- sim_posterior_predictive_check(fit, dt, outdir = export_path)
 
 #### ----------- Extract posterior intensities ---------- #####
-cat(" Extracting posterior intensities\n")
-dt.matrix <- posterior_contact_intensity(fit, dt.pop, type = "matrix", outdir = export.path)
-dt.margin <- posterior_contact_intensity(fit, dt.pop, type = "marginal", outdir = export.path)
+
+cat(" Extracting posterior intensities...\n")
+
+dt_matrix <- posterior_contact_intensity(fit,
+                                         dt_population,
+                                         type = "matrix",
+                                         outdir = export_path)
+
+dt_margin <- posterior_contact_intensity(fit,
+                                         dt_population,
+                                         type = "marginal",
+                                         outdir = export_path)
 
 ##### --------- Mean Squared Error ---------- #####
-cat(" Assessing Error\n")
-make_error_table(dt, dt.matrix, outdir = export.path)
+
+cat(" Assessing Prediction error...\n")
+
+sim_prediction_error_table(dt, dt_matrix, outdir = export_path)
 
 cat("\n DONE.\n")
