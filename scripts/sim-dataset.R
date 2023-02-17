@@ -4,99 +4,91 @@
 cat("\n---------- Simulating contact dataset ----------\n")
 
 # Load libraries
+library(yaml)
 library(optparse)
 library(data.table)
-library(ggplot2)
-library(ggpubr)
 
+# Read CLI arguments (for batch jobs on the HPC)
 option_list <- list(
-  optparse::make_option("--seed", type = "integer", default = 0721, dest = "seed"),
-  optparse::make_option("--size", type = "integer", default = 2000,
-                        help = "Number of participants in the survey [default \"%default\"]",
-                        dest = 'size'),
-  optparse::make_option("--nsim", type = "integer", default = 10,
-                        help = "Number of simulated datasets [default \"%default\"]",
-                        dest = "nsim"),
-  optparse::make_option("--strata", type = "character", default = "COVIMOD",
-                        help = "Age stratification scheme [default %default]",
-                        dest = "strata"),
-  optparse::make_option("--covid", type = "logical", default = TRUE,
-                        help = "Simulate contact patterns in a hypothetical scenario with restricted contact patterns",
-                        dest = "covid"),
-  optparse::make_option("--repo_path", type = "character", default = "/rds/general/user/sd121/home/covimod-gp",
-                        help = "Absolute file path to repository directory [default]",
-                        dest = 'repo.path')
+  make_option("--idx", type="integer", default=0,
+              help="PBD_JOB_IDX",
+              dest="idx")
 )
+cli_params <- parse_args(OptionParser(option_list = option_list))
 
-args <- optparse::parse_args(optparse::OptionParser(option_list = option_list))
-
-# args$repo.path <- "~/Imperial/covimod-gp"
-# args$strata <- "5yr"
-
-##### ---------- Error handling ---------- #####
-if(is.na(args$repo.path)){
-  stop("Please specify --repo_path")
-}
+# Read simulation parameters
+experiment_params <- yaml::read_yaml(file.path(getwd(), "settings/simulation.yml"))
 
 ###### ---------- Load data ---------- #####
-source(file.path(args$repo.path, "R", "sim-dataset-utility.R"))
+# Import simulated intensity data
+intensity_path <- ifelse(experiment_params$data$covid, "inCOVID", "preCOVID")
+intensity_file <- file.path("data/simulations/intensity", intensity_path, "data.rds")
+dt <- as.data.table(readRDS(file.path(experiment_params$repo_path, intensity_file)))
 
-# Import simulated intensity
-if (args$covid) {
-  args$data.path <- file.path("data/simulations/intensity", "inCOVID")
-} else {
-  args$data.path <- file.path("data/simulations/intensity", "preCOVID")
-}
+# Import population count data
+pop_file <- file.path(experiment_params$repo_path, "data/germany-population-2011.csv")
+dt_population <- as.data.table(read.csv(pop_file))
 
-dt <- as.data.table(readRDS( file.path(args$repo.path, args$data.path, "data.rds") ))
+##### ---------- configure data export ---------- #####
+# Configure data export settings
+export_dir_name <- paste(ifelse(experiment_params$data$covid, "inCOVID", "preCOVID"),
+                         experiment_params$data$size,
+                         experiment_params$data$strata,
+                         sep = "_")
+export_path <- file.path(experiment_params$out_path, "data/simulations/datasets", export_dir_name)
 
-# Population count data
-dpop <- as.data.table(read.csv(file.path(args$repo.path, "data/germany-population-2011.csv")))
-dpop <- dpop[age >= 6 & age <= 49]
-
-##### ---------- Data export ---------- #####
-# Directory under data/simulations/datasets to export the data
-dir.name <- paste(ifelse(args$covid, "inCOVID", "preCOVID"), args$size, args$strata, sep="_")
-
-export.path <- file.path(args$repo.path, "data/simulations/datasets", dir.name)
-if(!dir.exists(export.path)){
-  cat(paste("\n Making export directory:", export.path))
-  dir.create(export.path)
+# Create the directory to export the simulated data, if it doesn't exist
+if (!dir.exists(export_path)) {
+  cat(paste("\n Making export directory:", export_path))
+  dir.create(export_path, recursive = TRUE)
 }
 
 ##### ---------- Stratify age groups ---------- #####
+
+# Display progress message
 cat("\n Stratifying age groups ...")
-dt <- stratify_alter_age(dt, args$strata)
+
+# Stratify age groups using the `stratify_contact_age()` function
+source(file.path(experiment_params$repo_path, "R", "stratify_contact_age.R"))
+dt <- stratify_contact_age(dt, experiment_params$data$strata)
 
 ##### ---------- Simulating contact survey data ---------- ##########
+
+# Display progress message
 cat("\n Generating contact dataset ...")
-N <- args$size # Survey sample size
 
-# Proportion of each age in population
-dpop[, weight := pop/sum(pop)]
+# Set the survey sample size
+N <- experiment_params$data$size
 
-# Participant size for each age
-dpop[, part := round(weight*N)]
+dt_partsize <- merge(unique(dt[,.(age, gender)]), dt_population,
+                     all.x = TRUE,
+                     by = c("age", "gender"))
 
-# Calculate average contact counts
-dt <- merge(dt, dpop[, list(age, gender, part)], by=c("age", "gender"))
-dt[, mu := round(cntct_intensity*part)]
+# Calculate the proportion of each age in the population
+dt_partsize[, weight := pop / sum(pop)]
+dt_partsize[, part := round(weight * N)]
 
-# Simulate contact counts in survey
-for (i in 1:args$nsim){
-  set.seed(args$seed + i)
+# Calculate the average contact counts
+dt <- merge(dt, dt_partsize[, list(age, gender, part)],
+            all.x = TRUE,
+            by = c("age", "gender"))
 
-  dt[, y := rpois(nrow(dt), lambda=dt$mu)]
+dt[, mu := round(cntct_intensity * part)]
 
-  # Stratify contact intensities and contact rates
-  group_var <- c("age", "gender", "alter_age_strata", "alter_gender")
-  dt[, y_strata := sum(y), by=group_var]
-  dt[, cntct_intensity_strata := sum(cntct_intensity), by=group_var]
-  dt[, pop_strata := sum(pop), by=group_var]
-  dt[, cntct_rate_strata := sum(cntct_intensity)/sum(pop), by=group_var]
+# Simulate contact counts in the survey
+set.seed(experiment_params$seed + cli_params$idx)
+dt[, y := rpois(nrow(dt), lambda = dt$mu)]
 
-  # Save data
-  saveRDS(dt, file = file.path(export.path, paste0("data","_",i,".rds")))
-}
+# Stratify contact intensities and contact rates
+group_var <- c("age", "gender", "alter_age_strata", "alter_gender")
+dt[, y_strata := sum(y), by = group_var]
+dt[, cntct_intensity_strata := sum(cntct_intensity), by = group_var]
+dt[, pop_strata := sum(pop), by = group_var]
+dt[, cntct_rate_strata := sum(cntct_intensity) / sum(pop), by = group_var]
+
+# Save the data
+file_name <- paste0("data", "_", cli_params$idx, ".rds")
+file_path <- file.path(export_path, file_name)
+saveRDS(dt, file = file_path)
 
 cat("\n DONE. \n")
