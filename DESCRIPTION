@@ -7,7 +7,7 @@ Description: A code repository for the Bayes Rate Consistency model for estimati
 Depends:
   R (>= 3.3),
   tidyverse (>= 1.3),
-  data.table (>= 1),
+  data.table (== 1.14.6),
   reshape2,
   ggplot2,
   optparse,
