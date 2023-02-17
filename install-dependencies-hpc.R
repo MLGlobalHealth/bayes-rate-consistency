@@ -15,7 +15,7 @@ if (require("renv")) {
 }
 
 # Restore the state of the project (i.e. install all dependencies)
-renv::restore(project = NULL, lockfile = "renv.lock")
+renv::restore()
 
 # Install cmdstanr and cmdstan
 cat(" Installing cmdstanr...")
