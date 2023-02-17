@@ -1,0 +1,19 @@
+Type: project
+Version: v1.0.1
+Authors@R:
+  person("Shozen", "Dan", , "shozen.dan@gmail.com", role = "aut",
+         comment = c(ORDIC = "0000-0001-5575-641X"))
+Description: A code repository for the Bayes Rate Consistency model for estimating hight-resolution human social contacts.
+Depends:
+  R (>= 3.3)
+  tidyverse (>= 1.3)
+  data.table (>= 1)
+  reshape2 
+  ggplot2
+  optparse
+  yaml
+  posterior (>= 1.2)
+  bayesplot (>= 1.8)
+  loo (>= 2.5)
+  pammtools
+  viridis
