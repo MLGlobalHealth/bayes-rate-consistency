@@ -127,15 +127,15 @@ dt_ppc <- sim_posterior_predictive_check(fit, dt, outdir = export_path)
 
 cat(" Extracting posterior intensities...\n")
 
-dt_matrix <- posterior_contact_intensity(fit,
-                                         dt_population,
-                                         type = "matrix",
-                                         outdir = export_path)
+dt_matrix <- sim_posterior_contact_intensity(fit,
+                                             dt_population,
+                                             type = "matrix",
+                                             outdir = export_path)
 
-dt_margin <- posterior_contact_intensity(fit,
-                                         dt_population,
-                                         type = "marginal",
-                                         outdir = export_path)
+dt_margin <- sim_posterior_contact_intensity(fit,
+                                             dt_population,
+                                             type = "marginal",
+                                             outdir = export_path)
 
 ##### --------- Mean Squared Error ---------- #####
 

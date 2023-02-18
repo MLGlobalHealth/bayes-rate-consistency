@@ -1,5 +1,5 @@
 # Run Stan models
-cat("\n---------- Compiling and Running Stan Model ----------\n")
+cat("\n---------- Compiling and Running Stan Model ---------- \n")
 
 # Import libraries
 library(optparse)
