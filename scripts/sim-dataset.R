@@ -78,7 +78,7 @@ dt <- merge(dt, dt_partsize[, list(age, gender, part)],
 dt[, mu := round(cntct_intensity * part)]
 
 # Simulate contact counts in the survey
-set.seed(experiment_params$seed + cli_params$idx)
+set.seed(experiment_params$seed + cli_params$pidx)
 dt[, y := rpois(nrow(dt), lambda = dt$mu)]
 
 # Stratify contact intensities and contact rates
@@ -89,7 +89,7 @@ dt[, pop_strata := sum(pop), by = group_var]
 dt[, cntct_rate_strata := sum(cntct_intensity) / sum(pop), by = group_var]
 
 # Save the data
-file_name <- paste0("data", "_", cli_params$idx, ".rds")
+file_name <- paste0("data", "_", cli_params$pidx, ".rds")
 file_path <- file.path(export_path, file_name)
 saveRDS(dt, file = file_path)
 
