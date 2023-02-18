@@ -1,6 +1,3 @@
-repo_path: "/rds/general/user/sd121/home/bayes-rate-consistency"
-out_path: "/rds/general/user/sd121/home/bayes-rate-consistency-output"
-
 seed: 1234
 
 data:

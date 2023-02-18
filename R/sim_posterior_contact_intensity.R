@@ -41,7 +41,7 @@ sim_posterior_contact_intensity <- function(fit, dt_population, type="matrix", o
                                   gender_pair_idx %in% c(2,3), "Female", default = NA)]
 
     # Load datasets
-    dt_posterior <- merge(dt_posterior, dtp, by=c("alter_age", "alter_gender"), all.x = TRUE)
+    dt_posterior <- merge(dt_posterior, dt_population, by=c("alter_age", "alter_gender"), all.x = TRUE)
 
     dt_posterior[, intensity_M := M * pop]
     dt_posterior[, intensity_CL := CL * pop]

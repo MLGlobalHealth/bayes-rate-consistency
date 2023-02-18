@@ -10,9 +10,11 @@ library(data.table)
 
 # Read CLI arguments (for batch jobs on the HPC)
 option_list <- list(
-  make_option("--idx", type="integer", default=0,
+  make_option("-i", type="character", default=NA, help = "repository path", dest = "repo_path"),
+  make_option("-o", type="character", default=NA, help = "output path", dest = "out_path"),
+  make_option("--pidx", type="integer", default=0,
               help="PBD_JOB_IDX",
-              dest="idx")
+              dest="pidx")
 )
 cli_params <- parse_args(OptionParser(option_list = option_list))
 
@@ -23,10 +25,10 @@ experiment_params <- yaml::read_yaml(file.path(getwd(), "settings/simulation.yml
 # Import simulated intensity data
 intensity_path <- ifelse(experiment_params$data$covid, "inCOVID", "preCOVID")
 intensity_file <- file.path("data/simulations/intensity", intensity_path, "data.rds")
-dt <- as.data.table(readRDS(file.path(experiment_params$repo_path, intensity_file)))
+dt <- as.data.table(readRDS(file.path(cli_params$repo_path, intensity_file)))
 
 # Import population count data
-pop_file <- file.path(experiment_params$repo_path, "data/germany-population-2011.csv")
+pop_file <- file.path(cli_params$repo_path, "data/germany-population-2011.csv")
 dt_population <- as.data.table(read.csv(pop_file))
 
 ##### ---------- configure data export ---------- #####
@@ -35,7 +37,7 @@ export_dir_name <- paste(ifelse(experiment_params$data$covid, "inCOVID", "preCOV
                          experiment_params$data$size,
                          experiment_params$data$strata,
                          sep = "_")
-export_path <- file.path(experiment_params$out_path, "data/simulations/datasets", export_dir_name)
+export_path <- file.path(cli_params$out_path, "data/simulations/datasets", export_dir_name)
 
 # Create the directory to export the simulated data, if it doesn't exist
 if (!dir.exists(export_path)) {
@@ -49,7 +51,7 @@ if (!dir.exists(export_path)) {
 cat("\n Stratifying age groups ...")
 
 # Stratify age groups using the `stratify_contact_age()` function
-source(file.path(experiment_params$repo_path, "R", "stratify_contact_age.R"))
+source(file.path(cli_params$repo_path, "R", "stratify_contact_age.R"))
 dt <- stratify_contact_age(dt, experiment_params$data$strata)
 
 ##### ---------- Simulating contact survey data ---------- ##########

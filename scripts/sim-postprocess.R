@@ -23,9 +23,11 @@ cat(" Loading experiment parameters ...\n")
 
 # Read CLI arguments (for batch jobs on the HPC)
 option_list <- list(
-  make_option("--idx", type="integer", default=0,
+  make_option("-i", type="character", default=NA, help = "repository path", dest = "repo_path"),
+  make_option("-o", type="character", default=NA, help = "output path", dest = "out_path"),
+  make_option("--pidx", type="integer", default=0,
               help="PBD_JOB_IDX",
-              dest="idx")
+              dest="pidx")
 )
 cli_params <- parse_args(OptionParser(option_list = option_list))
 
@@ -33,7 +35,7 @@ cli_params <- parse_args(OptionParser(option_list = option_list))
 experiment_params <- read_yaml(file.path(getwd(), "settings/simulation.yml"))
 
 # Source helpers
-repo_path <- experiment_params$repo_path
+repo_path <- cli_params$repo_path
 source(file.path(repo_path, "R/convergence_diagnostic_stats.R"))
 source(file.path(repo_path, "R/sim_posterior_predictive_check.R"))
 source(file.path(repo_path, "R/sim_posterior_contact_intensity.R"))
@@ -51,15 +53,15 @@ model_name <- paste(model_params$name,
                     model_params$hsgp_m2,
                     sep="-")
 
-fit_path <- file.path(experiment_params$out_path,
+fit_path <- file.path(cli_params$out_path,
                       "stan_fits",
                       dataset_name,
-                      paste0(model_name, "-", cli_params$idx, ".rds"))
+                      paste0(model_name, "-", cli_params$pidx, ".rds"))
 
-data_path <- file.path(experiment_params$out_path,
+data_path <- file.path(cli_params$out_path,
                        "data/simulations/datasets",
                        dataset_name,
-                       paste0("data_", cli_params$idx, ".rds"))
+                       paste0("data_", cli_params$pidx, ".rds"))
 
 # Error handling
 if(!file.exists(fit_path)) {
@@ -71,10 +73,10 @@ if(!file.exists(data_path)) {
 }
 
 # Create export directory if it does not exist
-export_path <- file.path(experiment_params$out_path,
+export_path <- file.path(cli_params$out_path,
                          "results",
                          dataset_name,
-                         paste(model_name, cli_params$idx, sep="-"))
+                         paste(model_name, cli_params$pidx, sep="-"))
 export_fig_path <- file.path(export_path, "figures")
 if(!dir.exists(export_path)){
   dir.create(export_path, recursive = TRUE)

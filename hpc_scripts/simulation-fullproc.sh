@@ -1,10 +1,17 @@
-#!/bin/sh
+#!/bin/bash
+REPO_PATH=/rds/general/user/sd121/home/bayes-rate-consistency
+OUT_PATH=/rds/general/user/sd121/home/bayes-rate-consistency-outputs
+
+# Create output directory if it don't exist
+mkdir -p "$OUT_PATH"
+
+# Create main script
+cat > "$OUT_PATH/simulation-fullproc.pbs" <<EOF
+#!/bin/bash
 
 #PBS -l walltime=08:00:00
 #PBS -l select=1:ncpus=4:ompthreads=1:mem=50gb
-#PBS -J 1-2
-
-REPO_PATH=/rds/general/user/sd121/home/bayes-rate-consistency
+#PBS -J 1-10
 
 module load anaconda3/personal
 source activate bayes-rate-consistency
@@ -12,10 +19,24 @@ source activate bayes-rate-consistency
 cd $REPO_PATH
 
 # Generate simulated datasets
-Rscript scripts/sim-dataset.R --idx $PBS_ARRAY_INDEX
+Rscript scripts/sim-dataset.R \
+  -i "$REPO_PATH" \
+  -o "$OUT_PATH" \
+  --pidx "$PBS_ARRAY_INDEX"
 
 # Run Stan models
-Rscript scripts/sim-run-stan.R --idx $PBS_ARRAY_INDEX
+Rscript scripts/sim-run-stan.R \
+  -i "$REPO_PATH" \
+  -o "$OUT_PATH" \
+  --pidx "$PBS_ARRAY_INDEX"
 
 # Postprocessing
-Rscript scripts/sim-postprocess.R --idx $PBS_ARRAY_INDEX
+Rscript scripts/sim-postprocess.R \
+  -i "$REPO_PATH" \
+  -o "$OUT_PATH" \
+  --pidx "$PBS_ARRAY_INDEX"
+EOF
+
+# Execute main script
+cd $OUT_PATH
+qsub simulation-fullproc.pbs
