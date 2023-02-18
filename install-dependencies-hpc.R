@@ -19,10 +19,8 @@ renv::restore(project = NULL, lockfile = "renv.lock")
 
 # Install cmdstanr and cmdstan
 cat(" Installing cmdstanr...\n")
-install.packages("cmdstanr",
-                 version = "0.5.2",
-                 repos = c("https://mc-stan.org/r-packages/",
-                 getOption("repos")))
+install.packages("https://mc-stan.org/r-packages/src/contrib/cmdstanr_0.5.2.tar.gz",
+		 repos = NULL)
 
 require("cmdstanr")
 cmdstanr::check_cmdstan_toolchain()

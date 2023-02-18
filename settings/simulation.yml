@@ -1,5 +1,5 @@
-repo_path: "/Users/shozendan/bayes-rate-consistency"
-out_path: "/Users/shozendan/bayes-rate-consistency-output"
+repo_path: "/rds/general/user/sd121/home/bayes-rate-consistency"
+out_path: "/rds/general/user/sd121/home/bayes-rate-consistency-output"
 
 seed: 1234
 
@@ -9,11 +9,11 @@ data:
   strata: "COVIMOD"
 
 model:
-  name: "hsgp-m32-rd"
+  name: "hsgp-m52-rd"
   hsgp_binf: 1.5
   hsgp_m1: 30
   hsgp_m2: 20
   chains: 4
   warmup: 500
-  sampling: 1500
+  sampling: 500
   max_treedepth: 13
