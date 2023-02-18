@@ -79,7 +79,7 @@ export_path <- file.path(experiment_params$out_path,
 # Create directory if it does not exist
 if (!file.exists(export_path)) {
   cat(paste("\n Making export directory:", export_path))
-  dir.create(export_path)
+  dir.create(export_path, recursive = TRUE)
 }
 
 cat(" Saving the fitted model ...\n")
