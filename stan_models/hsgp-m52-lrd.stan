@@ -98,42 +98,41 @@ parameters {
 
 transformed parameters {
   matrix<lower=0>[T, G-1] gp_sigma = tan(gp_sigma_unif); // Reparametrize Half-Cauchy for stability
-
   array[T, G] matrix[A, A] log_cnt_rate; // Expose for easy access
-  array[T, G-1] matrix[A, A] f;
 
   vector[N_M] mu_flat_MM;
   vector[N_F] mu_flat_FF;
   vector[N_M] mu_flat_MF;
   vector[N_F] mu_flat_FM;
 
-  for (t in 1:T){
-    f[t, MM] = hsgp_matern52_restruct(A, gp_sigma[t,MM], gp_rho_1[t,MM], gp_rho_2[t,MM],
-                                      L1, L2, M1, M2, PHI1, PHI2, z[t, 1:M1,], NN_IDX);
-    f[t, FF] = hsgp_matern52_restruct(A, gp_sigma[t,FF], gp_rho_1[t,FF], gp_rho_2[t,FF],
-                                      L1, L2, M1, M2, PHI1, PHI2, z[t, (M1+1):2*M1,], NN_IDX);
-    f[t, MF] = hsgp_matern52_restruct(A, gp_sigma[t,MF], gp_rho_1[t,MF], gp_rho_2[t,MF],
-                                      L1, L2, M1, M2, PHI1, PHI2, z[t, (2*M1+1):3*M1,], NN_IDX);
+  { // local scope
+    array[T, G-1] matrix[A, A] f;
 
-    if(t == 1){
-      log_cnt_rate[t, MM] = beta_0[MM] + symmetrize_from_lower_tri(f[t, MM]);
-      log_cnt_rate[t, FF] = beta_0[FF] + symmetrize_from_lower_tri(f[t, FF]);
-      log_cnt_rate[t, MF] = beta_0[MF] + f[t, MF];
-      log_cnt_rate[t, FM] = beta_0[FM] + f[t, MF]';
-    } else { // Add time effects
-      log_cnt_rate[t, MM] = beta_0[MM] + symmetrize_from_lower_tri(f[t, MM]) + tau[t-1];
-      log_cnt_rate[t, FF] = beta_0[FF] + symmetrize_from_lower_tri(f[t, FF]) + tau[t-1];
-      log_cnt_rate[t, MF] = beta_0[MF] + f[t, MF] + tau[t-1];
-      log_cnt_rate[t, FM] = beta_0[FM] + f[t, MF]' + tau[t-1];
-    }
+    for (t in 1:T){
+      f[t, MM] = hsgp_matern52_restruct(A, gp_sigma[t,MM], gp_rho_1[t,MM], gp_rho_2[t,MM],
+                                        L1, L2, M1, M2, PHI1, PHI2, z[t, 1:M1,], NN_IDX);
+      f[t, FF] = hsgp_matern52_restruct(A, gp_sigma[t,FF], gp_rho_1[t,FF], gp_rho_2[t,FF],
+                                        L1, L2, M1, M2, PHI1, PHI2, z[t, (M1+1):2*M1,], NN_IDX);
+      f[t, MF] = hsgp_matern52_restruct(A, gp_sigma[t,MF], gp_rho_1[t,MF], gp_rho_2[t,MF],
+                                        L1, L2, M1, M2, PHI1, PHI2, z[t, (2*M1+1):3*M1,], NN_IDX);
 
-    { // Local scope
+      if(t == 1){
+        log_cnt_rate[t, MM] = beta_0[MM] + symmetrize_from_lower_tri(f[t, MM]);
+        log_cnt_rate[t, FF] = beta_0[FF] + symmetrize_from_lower_tri(f[t, FF]);
+        log_cnt_rate[t, MF] = beta_0[MF] + f[t, MF];
+        log_cnt_rate[t, FM] = beta_0[FM] + f[t, MF]';
+      } else { // Add time effects
+        log_cnt_rate[t, MM] = beta_0[MM] + symmetrize_from_lower_tri(f[t, MM]) + tau[t-1];
+        log_cnt_rate[t, FF] = beta_0[FF] + symmetrize_from_lower_tri(f[t, FF]) + tau[t-1];
+        log_cnt_rate[t, MF] = beta_0[MF] + f[t, MF] + tau[t-1];
+        log_cnt_rate[t, FM] = beta_0[FM] + f[t, MF]' + tau[t-1];
+      }
+
       // Stratified contact intensities
       vector[A*C] m_flat_MM = to_vector( (exp(log_cnt_rate[t, MM] + log_P_M) * map_age_to_strata)' );
       vector[A*C] m_flat_FF = to_vector( (exp(log_cnt_rate[t, FF] + log_P_F) * map_age_to_strata)' );
       vector[A*C] m_flat_MF = to_vector( (exp(log_cnt_rate[t, MF] + log_P_F) * map_age_to_strata)' );
       vector[A*C] m_flat_FM = to_vector( (exp(log_cnt_rate[t, FM] + log_P_M) * map_age_to_strata)' );
-
 
       for(r in 1:t){ // Add repeat effects
         int u = map_tr_to_u[t, r];
