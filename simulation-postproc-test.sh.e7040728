@@ -1,0 +1,39 @@
+This is cmdstanr version 0.5.2
+- CmdStanR documentation and vignettes: mc-stan.org/cmdstanr
+- CmdStan path: /rds/general/user/sd121/home/.cmdstan/cmdstan-2.31.0
+- CmdStan version: 2.31.0
+This is bayesplot version 1.8.1
+- Online documentation and vignettes at mc-stan.org/bayesplot
+- bayesplot theme set to bayesplot::theme_default()
+   * Does _not_ affect other ggplot2 plots
+   * See ?bayesplot_theme_set for details on theme setting
+This is loo version 2.5.1
+- Online documentation and vignettes at mc-stan.org/loo
+- As of v2.0.0 loo defaults to 1 core but we recommend using as many as possible. Use the 'cores' argument or set options(mc.cores = NUM_CORES) for an entire session. 
+
+Attaching package: ‘reshape2’
+
+The following objects are masked from ‘package:data.table’:
+
+    dcast, melt
+
+
+Attaching package: ‘pammtools’
+
+The following object is masked from ‘package:stats’:
+
+    filter
+
+Warning: 20 of 2000 (1.0%) transitions ended with a divergence.
+See https://mc-stan.org/misc/warnings for details.
+
+Warning messages:
+1: 
+11 (0.9%) p_waic estimates greater than 0.4. We recommend trying loo instead. 
+2: Relative effective sample sizes ('r_eff' argument) not specified.
+For models fit with MCMC, the reported PSIS effective sample sizes and 
+MCSE estimates will be over-optimistic. 
+Error in merge(dt_posterior, dtp, by = c("alter_age", "alter_gender"),  : 
+  object 'dtp' not found
+Calls: sim_posterior_contact_intensity -> merge -> merge.data.table -> is.data.table
+Execution halted
