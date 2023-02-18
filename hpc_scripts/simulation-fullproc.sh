@@ -1,6 +1,6 @@
 #!/bin/bash
 REPO_PATH=/rds/general/user/sd121/home/bayes-rate-consistency
-OUT_PATH=/rds/general/user/sd121/home/bayes-rate-consistency-outputs
+OUT_PATH=/rds/general/user/sd121/home/bayes-rate-consistency-output
 
 # Create main script
 cat > "$OUT_PATH/simulation-fullproc.pbs" <<EOF

@@ -14,8 +14,8 @@ cat(" Loading experiment parameters ...\n")
 
 # Read CLI arguments (for batch jobs on the HPC)
 option_list <- list(
-  make_option("-i", type="character", default=NA, help = "repository path", dest = "repo_path"),
-  make_option("-o", type="character", default=NA, help = "output path", dest = "out_path"),
+  make_option(c("-i", "--in"), type="character", default=NA, help = "repository path", dest = "repo_path"),
+  make_option(c("-o", "--out"), type="character", default=NA, help = "output path", dest = "out_path"),
   make_option("--pidx", type="integer", default=0,
               help="PBD_JOB_IDX",
               dest="pidx")
