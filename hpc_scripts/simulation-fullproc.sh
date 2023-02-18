@@ -13,25 +13,25 @@ cat > "$OUT_PATH/simulation-fullproc.pbs" <<EOF
 module load anaconda3/personal
 source activate bayes-rate-consistency
 
-cd $REPO_PATH
+cd "$REPO_PATH"
 
 # Generate simulated datasets
 Rscript scripts/sim-dataset.R \
   -i "$REPO_PATH" \
   -o "$OUT_PATH" \
-  --pidx "$PBS_ARRAY_INDEX"
+  --pidx $PBS_ARRAY_INDEX
 
 # Run Stan models
 Rscript scripts/sim-run-stan.R \
   -i "$REPO_PATH" \
   -o "$OUT_PATH" \
-  --pidx "$PBS_ARRAY_INDEX"
+  --pidx $PBS_ARRAY_INDEX
 
 # Postprocessing
 Rscript scripts/sim-postprocess.R \
   -i "$REPO_PATH" \
   -o "$OUT_PATH" \
-  --pidx "$PBS_ARRAY_INDEX"
+  --pidx $PBS_ARRAY_INDEX
 EOF
 
 # Execute main script
