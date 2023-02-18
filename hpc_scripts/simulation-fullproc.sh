@@ -19,19 +19,19 @@ cd "$REPO_PATH"
 Rscript scripts/sim-dataset.R \
   -i "$REPO_PATH" \
   -o "$OUT_PATH" \
-  --pidx $PBS_ARRAY_INDEX
+  --pidx "\$PBS_ARRAY_INDEX"
 
 # Run Stan models
 Rscript scripts/sim-run-stan.R \
   -i "$REPO_PATH" \
   -o "$OUT_PATH" \
-  --pidx $PBS_ARRAY_INDEX
+  --pidx "\$PBS_ARRAY_INDEX"
 
 # Postprocessing
 Rscript scripts/sim-postprocess.R \
   -i "$REPO_PATH" \
   -o "$OUT_PATH" \
-  --pidx $PBS_ARRAY_INDEX
+  --pidx "\$PBS_ARRAY_INDEX"
 EOF
 
 # Execute main script
