@@ -2,9 +2,6 @@
 REPO_PATH=/rds/general/user/sd121/home/bayes-rate-consistency
 OUT_PATH=/rds/general/user/sd121/home/bayes-rate-consistency-outputs
 
-# Create output directory if it don't exist
-mkdir -p "$OUT_PATH"
-
 # Create main script
 cat > "$OUT_PATH/simulation-fullproc.pbs" <<EOF
 #!/bin/bash
