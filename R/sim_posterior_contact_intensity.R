@@ -107,7 +107,7 @@ extract_posterior_rates <- function(fit){
   indices <- str_match(dt_po$variable, pattern)[,2:4]
   dt_po$gender_pair_idx <- as.numeric(indices[,1])
   dt_po$age_idx <- as.numeric(indices[,2])
-  dt_po$alter_age_strata_idx <- as.numeric(indices[,3])
+  dt_po$alter_age_idx <- as.numeric(indices[,3])
 
   return(dt_po)
 }
