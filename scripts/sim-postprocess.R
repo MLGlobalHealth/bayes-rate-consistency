@@ -16,23 +16,26 @@ library(pammtools)
 
 bayesplot::color_scheme_set(scheme = "mix-blue-pink")
 
-options(mc.cores=4)
+options(mc.cores = 4)
 
 ##### ---------- I/O ---------- #####
 cat(" Loading experiment parameters ...\n")
 
 # Read CLI arguments (for batch jobs on the HPC)
 option_list <- list(
-  make_option(c("-i", "--in"), type="character", default=NA, help = "repository path", dest = "repo_path"),
-  make_option(c("-o", "--out"), type="character", default=NA, help = "output path", dest = "out_path"),
-  make_option("--pidx", type="integer", default=0,
-              help="PBD_JOB_IDX",
-              dest="pidx")
+  make_option(c("-i", "--in"), type = "character", default = NA, help = "repository path", dest = "repo_path"),
+  make_option(c("-o", "--out"), type = "character", default = NA, help = "output path", dest = "out_path"),
+  make_option(c("--config"), type = "character", default = NA, help = "configuration file", dest = "config_file"),
+  make_option("--pidx", type = "integer", default = 0,
+              help = "PBD_JOB_IDX",
+              dest = "pidx")
 )
 cli_params <- parse_args(OptionParser(option_list = option_list))
 
 # Read experiment settings
-experiment_params <- read_yaml(file.path(getwd(), "settings/simulation.yml"))
+experiment_params <- read_yaml(file.path(getwd(),
+                                         "config",
+                                         cli_params$config_file))
 
 # Source helpers
 repo_path <- cli_params$repo_path
@@ -51,7 +54,7 @@ model_params <- experiment_params$model
 model_name <- paste(model_params$name,
                     model_params$hsgp_m1,
                     model_params$hsgp_m2,
-                    sep="-")
+                    sep = "-")
 
 fit_path <- file.path(cli_params$out_path,
                       "stan_fits",
@@ -64,11 +67,11 @@ data_path <- file.path(cli_params$out_path,
                        paste0("data_", cli_params$pidx, ".rds"))
 
 # Error handling
-if(!file.exists(fit_path)) {
+if (!file.exists(fit_path)) {
   cat("\n Model: ", fit_path)
   stop("The specified model does not exist!")
 }
-if(!file.exists(data_path)) {
+if (!file.exists(data_path)) {
   stop("The specified dataset does not exists!")
 }
 
@@ -76,13 +79,13 @@ if(!file.exists(data_path)) {
 export_path <- file.path(cli_params$out_path,
                          "results",
                          dataset_name,
-                         paste(model_name, cli_params$pidx, sep="-"))
+                         paste(model_name, cli_params$pidx, sep = "-"))
 export_fig_path <- file.path(export_path, "figures")
-if(!dir.exists(export_path)){
+if (!dir.exists(export_path)) {
   dir.create(export_path, recursive = TRUE)
   dir.create(export_fig_path)
 } else {
-  if(!dir.exists(export_fig_path)){
+  if (!dir.exists(export_fig_path)) {
     dir.create(export_fig_path)
   }
 }

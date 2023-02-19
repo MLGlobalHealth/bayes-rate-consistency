@@ -1,0 +1,12 @@
+seed: 1234
+model:
+  name: "hsgp-m52-rd"
+  hsgp_binf: 1.5
+  hsgp_m1: 30
+  hsgp_m2: 20
+  chains: 8
+  warmup: 500
+  sampling: 1000
+  max_treedepth: 13
+  adapt_delta: 0.90
+  refresh: 50

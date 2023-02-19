@@ -10,20 +10,23 @@ library(data.table)
 
 # Read CLI arguments (for batch jobs on the HPC)
 option_list <- list(
-  make_option(c("-i", "--in"), type="character", default=NA, help = "repository path", dest = "repo_path"),
-  make_option(c("-o", "--out"), type="character", default=NA, help = "output path", dest = "out_path"),
-  make_option("--pidx", type="integer", default=0,
-              help="PBD_JOB_IDX",
-              dest="pidx")
+  make_option(c("-i", "--in"), type = "character", default = NA, help = "repository path", dest = "repo_path"),
+  make_option(c("-o", "--out"), type = "character", default = NA, help = "output path", dest = "out_path"),
+  make_option(c("--config"), type = "character", default = NA, help = "configuration file", dest = "config_file"),
+  make_option("--pidx", type = "integer", default = 0,
+              help = "PBD_JOB_IDX",
+              dest = "pidx")
 )
 cli_params <- parse_args(OptionParser(option_list = option_list))
 
 # Read simulation parameters
-experiment_params <- yaml::read_yaml(file.path(getwd(), "settings/simulation.yml"))
+config <- yaml::read_yaml(file.path(getwd(),
+                                    "config",
+                                    cli_params$config_file))
 
 ###### ---------- Load data ---------- #####
 # Import simulated intensity data
-intensity_path <- ifelse(experiment_params$data$covid, "inCOVID", "preCOVID")
+intensity_path <- ifelse(config$data$covid, "inCOVID", "preCOVID")
 intensity_file <- file.path("data/simulations/intensity", intensity_path, "data.rds")
 dt <- as.data.table(readRDS(file.path(cli_params$repo_path, intensity_file)))
 
@@ -33,9 +36,9 @@ dt_population <- as.data.table(read.csv(pop_file))
 
 ##### ---------- configure data export ---------- #####
 # Configure data export settings
-export_dir_name <- paste(ifelse(experiment_params$data$covid, "inCOVID", "preCOVID"),
-                         experiment_params$data$size,
-                         experiment_params$data$strata,
+export_dir_name <- paste(ifelse(config$data$covid, "inCOVID", "preCOVID"),
+                         config$data$size,
+                         config$data$strata,
                          sep = "_")
 export_path <- file.path(cli_params$out_path, "data/simulations/datasets", export_dir_name)
 
@@ -52,7 +55,7 @@ cat("\n Stratifying age groups ...")
 
 # Stratify age groups using the `stratify_contact_age()` function
 source(file.path(cli_params$repo_path, "R", "stratify_contact_age.R"))
-dt <- stratify_contact_age(dt, experiment_params$data$strata)
+dt <- stratify_contact_age(dt, config$data$strata)
 
 ##### ---------- Simulating contact survey data ---------- ##########
 
@@ -60,7 +63,7 @@ dt <- stratify_contact_age(dt, experiment_params$data$strata)
 cat("\n Generating contact dataset ...")
 
 # Set the survey sample size
-N <- experiment_params$data$size
+N <- config$data$size
 
 dt_partsize <- merge(unique(dt[,.(age, gender)]), dt_population,
                      all.x = TRUE,
@@ -78,7 +81,7 @@ dt <- merge(dt, dt_partsize[, list(age, gender, part)],
 dt[, mu := round(cntct_intensity * part)]
 
 # Simulate contact counts in the survey
-set.seed(experiment_params$seed + cli_params$pidx)
+set.seed(config$seed + cli_params$pidx)
 dt[, y := rpois(nrow(dt), lambda = dt$mu)]
 
 # Stratify contact intensities and contact rates
