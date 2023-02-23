@@ -1,4 +1,12 @@
 seed: 1234
+
+data:
+  path: "POLYMOD/polymod.rds"
+  waves: 1
+  num_participant_age_groups: 85
+  num_contact_age_groups: 85
+  single_contact_age: TRUE
+
 model:
   name: "hsgp-m52-rd"
   hsgp_binf: 1.5

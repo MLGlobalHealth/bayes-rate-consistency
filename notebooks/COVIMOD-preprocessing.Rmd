@@ -9,51 +9,67 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+## Setup
 ```{r message=FALSE}
+# Load libraries
 library(data.table)
 library(stringr)
 library(ggplot2)
+library(dplyr)
 library(pammtools)
 
-source("../R/covimod-utility.R")
-source("../R/stan-utility.R")
+# Load helpers
+source("../R/load_covimod_data.R")
+source("../R/fill_missing_child_ages.R")
 ```
 
-## Setup
+## Load data
+
+- The code loads data from a directory using load_covimod_data.
+- The loaded data is then split into three different data tables: dt_participants, dt_non_household, and dt_household.
+- The code limits the data in all three tables to the first 5 waves using the subset function [wave <= 5].
 ```{r}
-covimod <- load_covimod_data("~/Imperial/covimod-gp")
-dt.part <- covimod$part
-dt.nhh <- covimod$nhh
-dt.hh <- covimod$hh
+covimod <- load_covimod_data("~/bayes-rate-consistency")
+dt_participants <- covimod$part
+dt_non_household <- covimod$nhh
+dt_household <- covimod$hh
 
 # Limit to first 5 waves
-dt.part <- dt.part[wave <= 5]
-dt.nhh <- dt.nhh[wave <= 5]
-dt.hh <- dt.hh[wave <= 5]
+dt_participants <- dt_participants[wave <= 5]
+dt_non_household <- dt_non_household[wave <= 5]
+dt_household <- dt_household[wave <= 5]
 ```
 
 ## Participant data
+
+- The code removes participants with missing age-strata or gender information from dt_participants using the is.na function.
+- The code creates a new column rep in dt_participants that counts the number of times a participant repeatedly participated in the survey using the seq_len function.
+- The rep column is adjusted to a maximum value of 4 using the ifelse function.
+- The fill_missing_child_ages function is applied to dt_participants to impute missing children age using a uniform distribution with a specified seed.
+- A new index u is created in dt_participants that is a combined index of wave and rep using the fcase function.
+- Rows in dt_participants with a u value of 11 are removed using the subset function.
+- The code creates three variables u.unique, u.full, and u.missing to identify missing u values and prints u.missing.
 ```{r}
 # Remove participants with missing age-strata or gender information
-dt.part <- dt.part[!is.na(gender) & !is.na(age_strata)]
+dt_participants <- dt_participants[!is.na(gender) & !is.na(age_strata)]
 
 # The number of times a participant repeatedly participated in the survey
-dt.part[, rep := seq_len(.N), by=.(new_id)]
-dt.part[, rep := rep - 1]
-dt.part[, rep := ifelse(rep > 4, 4, rep)]
+dt_participants[, rep := seq_len(.N), by = .(new_id)]
+dt_participants[, rep := rep - 1]
+dt_participants[, rep := ifelse(rep > 4, 4, rep)]
 
 # Impute children age by sampling from uniform distribution
-dt.part <- impute_child_age(dt.part, seed=1527)
+dt_participants <- fill_missing_child_ages(dt_participants, seed=1527)
 
 # Create a new index U which is a combined index of wave and rep
-dt.part[, u := fcase(wave == 1, 1, 
+dt_participants[, u := fcase(wave == 1, 1, 
                      wave == 2, 2 + rep,
-                     wave >= 3, 1/2*(wave-1)*(wave)+rep+1)]
+                     wave >= 3, 1/2*(wave - 1)*(wave) + rep + 1)]
 
-dt.part <- dt.part[u != 11]
+dt_participants <- dt_participants[u != 11]
 
 # Missing Us
-u.unique <- sort(unique(dt.part$u))
+u.unique <- sort(unique(dt_participants$u))
 u.full <- seq(1, max(u.unique))
 u.missing <- u.full[!(u.full %in% u.unique)]
 
@@ -65,10 +81,10 @@ print(u.missing)
 ### Ambiguous contacts
 ```{r}
 # Identify contacts with missing age and gender
-dt.amb <- dt.nhh[is.na(alter_age_strata) | is.na(alter_gender)]
+dt.amb <- dt_non_household[is.na(alter_age_strata) | is.na(alter_gender)]
 
 # Append participant info
-dt.amb <- merge(dt.amb[,.(new_id, wave)], dt.part, by=c("new_id", "wave"), all.x = TRUE)
+dt.amb <- merge(dt.amb[,.(new_id, wave)], dt_participants, by=c("new_id", "wave"), all.x = TRUE)
 
 # Treat all as missing (some have either gender or age-strata info)
 dt.amb <- dt.amb[, list(y_amb = .N), by=c("new_id", "u")]
@@ -76,10 +92,10 @@ dt.amb <- dt.amb[, list(y_amb = .N), by=c("new_id", "u")]
 hist(dt.amb$y_amb) # Quick visualization
 
 # Truncate at 30 (to remove extreme cases where people reported 30+ contacts)
-dt.amb <- merge(dt.amb, dt.part, by=c("new_id", "u"), all.x = TRUE)
+dt.amb <- merge(dt.amb, dt_participants, by=c("new_id", "u"), all.x = TRUE)
 
 # Remove ambiguous contacts from original nhh data
-dt.nhh <- dt.nhh[!(is.na(alter_age_strata) | is.na(alter_gender))]
+dt_non_household <- dt_non_household[!(is.na(alter_age_strata) | is.na(alter_gender))]
 ```
 
 ### Group contacts
@@ -88,30 +104,30 @@ SDcols_Q75 <- c("Q75_u18_work", "Q75_u18_school", "Q75_u18_else",
                 "Q75_1864_work", "Q75_1864_school", "Q75_1864_else",
                 "Q75_o64_work", "Q75_o64_school", "Q75_o64_else")
 
-dt.part[, y_grp := rowSums(.SD, na.rm = T), .SDcols = SDcols_Q75]
-dt.part[y_grp > 60, y_grp := 60]
+dt_participants[, y_grp := rowSums(.SD, na.rm = T), .SDcols = SDcols_Q75]
+dt_participants[y_grp > 60, y_grp := 60]
 
-dt.grp <- dt.part[, .(y = sum(y_grp)), by=.(wave, imp_age, gender)]
+dt.grp <- dt_participants[, .(y = sum(y_grp)), by=.(wave, imp_age, gender)]
 setnames(dt.grp, "imp_age", "age")
 ```
 
 ## Combine household and non-household data
 ```{r}
-setnames(dt.hh, "hh_met_this_day", "y")
-dt.hh$type <- "hh"
+setnames(dt_household, "hh_met_this_day", "y")
+dt_household$type <- "hh"
 
-dt.nhh$y <- 1
-dt.nhh$type <- "nhh"
+dt_non_household$y <- 1
+dt_non_household$type <- "nhh"
 
 # Combine household and non-household contacts
-dt.cmb <- rbind(dt.nhh[,.(new_id, wave, type, alter_age_strata, alter_gender, y)], 
-                dt.hh[,.(new_id, wave, type, alter_age_strata, alter_gender, y)])
+dt.cmb <- rbind(dt_non_household[,.(new_id, wave, type, alter_age_strata, alter_gender, y)], 
+                dt_household[,.(new_id, wave, type, alter_age_strata, alter_gender, y)])
 
 dt.cmb$type <- factor(dt.cmb$type, levels=c("hh", "nhh"))
 dt.cmb <- dt.cmb[order(wave, new_id),]
 
 # Merge with participant data
-dt.cmb <- merge(dt.cmb, dt.part, by=c("new_id", "wave"), all.x = TRUE)
+dt.cmb <- merge(dt.cmb, dt_participants, by=c("new_id", "wave"), all.x = TRUE)
 
 # Sanity check
 sum(dt.cmb$y, na.rm = T) + sum(dt.amb$y_amb) + sum(dt.grp$y)
@@ -120,8 +136,8 @@ sum(dt.cmb$y, na.rm = T) + sum(dt.amb$y_amb) + sum(dt.grp$y)
 ## Aggregate contacts
 ```{r}
 # Participant size by wave and repetition
-dt.part.size <- dt.part[, .(N = .N), by=.(u, wave, rep, imp_age, gender)]
-setnames(dt.part.size, "imp_age", "age")
+dt_participants.size <- dt_participants[, .(N = .N), by=.(u, wave, rep, imp_age, gender)]
+setnames(dt_participants.size, "imp_age", "age")
 
 # Aggregate age-gender-specific contacts
 dt.cmb.agg <- dt.cmb[, .(y = sum(y, na.rm=T)), by=.(u, wave, rep, imp_age, gender, alter_age_strata, alter_gender)]
@@ -143,7 +159,7 @@ dt.amb.agg.margin[, zeta := y/y_tot]
 dt.amb.agg.margin[, zeta := ifelse(is.nan(zeta), 1, zeta)]
 
 # Offset terms
-dt.offsets <- merge(dt.part.size, dt.amb.agg.margin[,.(wave, age, gender, zeta)], 
+dt.offsets <- merge(dt_participants.size, dt.amb.agg.margin[,.(wave, age, gender, zeta)], 
                     by=c("wave","age","gender"), all.x = T)
 dt.offsets[is.na(zeta), zeta := 1]
 
@@ -179,7 +195,6 @@ d[, rep := fcase(wave == 1, 0,
                  wave == 2, u - wave,
                  wave >= 3, u - 1/2*(wave-1)*(wave)-1)]
 ```
-
 
 ## Data check
 ```{r}
