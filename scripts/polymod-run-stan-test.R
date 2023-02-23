@@ -1,13 +1,17 @@
-cat("\n---------- Compiling and Running Stan Model ----------\n")
+# Run Stan models on POLYMOD data
+
+cat("\n---------- Compiling and Running Stan Model ---------- \n")
 
 # Load libraries
 library(optparse)
+library(yaml)
 library(data.table)
 library(tidyr)
 library(stringr)
 library(cmdstanr)
 
 ##### ---------- I/O ---------- #####
+
 cat(" Configuring IO...\n")
 
 option_list <- list(
@@ -15,12 +19,12 @@ option_list <- list(
   make_option(c("-o", "--out"), type = "character", default = NA, help = "output path", dest = "out_path")
 )
 cli_params <- optparse::parse_args(optparse::OptionParser(option_list = option_list))
-config <- yaml::read_yaml(file.path(cli_params$repo_path, "settings/covimod-longitudinal.yml"))
+config <- yaml::read_yaml(file.path(cli_params$repo_path, "settings/polymod.yml"))
 
 # Path to model
 model_path <- file.path(cli_params$repo_path,
                         "stan_models",
-                        paste0(config$model$name, ".stan"))
+                        paste0(config$model$name), ".stan")
 
 # Export path
 export_path <- file.path(cli_params$out_path, "stan_fits")
@@ -30,50 +34,38 @@ if (!file.exists(export_path)) {
 }
 
 cat(" Loading data...\n")
-# Load helpers
-source(file.path(cli_params$repo_path, "R/make_stan_data.R"))
-source(file.path(cli_params$repo_path, "R/covimod-utility.R"))
+# Load POLYMOD data
+polymod <- readRDS(file.path(cli_params$repo_path, "data/POLYMOD/polymod.rds"))
 
-# Load data
-covimod <- readRDS(file.path(cli_params$repo_path, "data/COVIMOD/COVIMOD-multi.rds"))
-
-dt_contacts <- covimod$contacts[wave <= config$data$waves]
-dt_offsets <- covimod$offsets[wave <= config$data$waves]
-dt_population <- covimod$pop
+dt_contacts <- as.data.table(polymod$contacts)
+dt_offsets <- as.data.table(polymod$offsets)
+dt_population <- as.data.table(polymod$population)
 
 ## Configure Stan data
 cat(" Configuring Stan data ...\n")
 
-model_params <- config$model
+source(file.path(cli_params$repo_path, "R/make_stan_data.R"))
+
 stan_data <- make_stan_data(A = 85,
-                            C = 13,
-                            W = config$data$waves,
+                            C = 85,
+                            W = NULL,
                             dt_contacts = dt_contacts,
                             dt_offsets = dt_offsets,
                             dt_population = dt_population,
-                            survey = "COVIMOD",
-                            model_params = model_params)
-
-# initial values
-source(file.path(cli_params$repo_path, "R/stratify_contact_age.R"))
-dt_population <- age_stratify(dt_population)
-dt_population <- dt_population[, .(pop = sum(pop)), by = c("gender", "age_strata")]
-dt_baseline <- merge(dt_contacts, dt_population,
-                     by.x = c("alter_gender", "alter_age_strata"),
-                     by.y = c("gender", "age_strata"))
-baseline <- dt_baseline[y > 0, floor(mean( log( y / N ) - log(pop) ))]
-model_inits <- function(){ list(beta_0 = baseline + rnorm(1, 0, 0.2)) }
+                            survey = "POLYMOD",
+                            model_params = config$model)
 
 cat(" Compiling Stan model ...\n")
 
+# Compile stan program
 model <- cmdstanr::cmdstan_model(model_path, force_recompile = TRUE)
+model_params <- config$model
 
 cat(" Running Stan model ...\n")
 
 fit <- model$sample(
   data = stan_data,
   chains = model_params$chains,
-  init = model_inits,
   seed = config$seed,
   iter_warmup = model_params$warmup,
   iter_sampling = model_params$sampling,
@@ -83,9 +75,9 @@ fit <- model$sample(
   refresh = model_params$refresh
 )
 
-cat(" Saving the fitted model ...\n")
+cat(" Saving fitted model ...\n")
 
-model_name <- paste(model_params$name, config$data$waves, sep = "-")
+model_name <- paste("polymod", model_params$name, sep = "-")
 fit$save_object(file = file.path(export_path, paste0(model_name, ".rds")))
 
 cat("\n Run Stan ALL DONE.\n")

@@ -62,24 +62,19 @@ parameters
 transformed parameters
 {
   vector<lower=0>[G-1] gp_alpha = tan(gp_alpha_unif); // Reparametrize Half-Cauchy
-
-  matrix[A,A] f_MM, f_FF, f_MF;
   array[G] matrix[A,A] log_cnt_rate;
-  array[G] matrix<lower=0>[A,C] alpha_strata;
 
-  f_MM = gp2d_matern32(age_idx_std, age_idx_std, gp_alpha[MM], gp_rho_1[MM], gp_rho_2[MM], z[1:A,]);
-  f_FF = gp2d_matern32(age_idx_std, age_idx_std, gp_alpha[FF], gp_rho_1[FF], gp_rho_2[FF], z[(A+1):2*A,]);
-  f_MF = gp2d_matern32(age_idx_std, age_idx_std, gp_alpha[MF], gp_rho_1[MF], gp_rho_2[MF], z[(2*A+1):3*A,]);
+  { // local scope
+    matrix[A,A] f_MM, f_FF, f_MF;
+    f_MM = gp2d_matern32(age_idx_std, age_idx_std, gp_alpha[MM], gp_rho_1[MM], gp_rho_2[MM], z[1:A,]);
+    f_FF = gp2d_matern32(age_idx_std, age_idx_std, gp_alpha[FF], gp_rho_1[FF], gp_rho_2[FF], z[(A+1):2*A,]);
+    f_MF = gp2d_matern32(age_idx_std, age_idx_std, gp_alpha[MF], gp_rho_1[MF], gp_rho_2[MF], z[(2*A+1):3*A,]);
 
-  log_cnt_rate[MM] = beta_0[MM] + symmetrize_from_lower_tri(f_MM);
-  log_cnt_rate[FF] = beta_0[FF] + symmetrize_from_lower_tri(f_FF);
-  log_cnt_rate[MF] = beta_0[MF] + f_MF;
-  log_cnt_rate[FM] = beta_0[FM] + f_MF';
-
-  alpha_strata[MM] = exp(log_cnt_rate[MM] + log_offset[MM]) * map_age_to_strata / nu + epsilon;
-  alpha_strata[FF] = exp(log_cnt_rate[FF] + log_offset[FF]) * map_age_to_strata / nu + epsilon;
-  alpha_strata[MF] = exp(log_cnt_rate[MF] + log_offset[MF]) * map_age_to_strata / nu + epsilon;
-  alpha_strata[FM] = exp(log_cnt_rate[FM] + log_offset[FM]) * map_age_to_strata / nu + epsilon;
+    log_cnt_rate[MM] = beta_0[MM] + symmetrize_from_lower_tri(f_MM);
+    log_cnt_rate[FF] = beta_0[FF] + symmetrize_from_lower_tri(f_FF);
+    log_cnt_rate[MF] = beta_0[MF] + f_MF;
+    log_cnt_rate[FM] = beta_0[FM] + f_MF';
+  }
 }
 
 model
@@ -96,7 +91,13 @@ model
   // baseline
   target += normal_lpdf(beta_0 | 0, 10);
 
-  {
+  { // local scope
+    array[G] matrix[A,C] alpha_strata;
+    alpha_strata[MM] = exp(log_cnt_rate[MM] + log_offset[MM]) * map_age_to_strata / nu + epsilon;
+    alpha_strata[FF] = exp(log_cnt_rate[FF] + log_offset[FF]) * map_age_to_strata / nu + epsilon;
+    alpha_strata[MF] = exp(log_cnt_rate[MF] + log_offset[MF]) * map_age_to_strata / nu + epsilon;
+    alpha_strata[FM] = exp(log_cnt_rate[FM] + log_offset[FM]) * map_age_to_strata / nu + epsilon;
+
     vector[N] alpha_strata_flat =
     append_row(
         append_row(
@@ -117,13 +118,19 @@ generated quantities
   array[N] real log_lik;
   array[G,A,C] int yhat_strata;
 
-  for(g in 1:G){
-    for(i in 1:A){
-      yhat_strata[g,i,:] = neg_binomial_rng( alpha_strata[g,i,:], inv(nu) );
-    }
-  }
+  { // local scope
+    array[G] matrix[A,C] alpha_strata;
+    alpha_strata[MM] = exp(log_cnt_rate[MM] + log_offset[MM]) * map_age_to_strata / nu + epsilon;
+    alpha_strata[FF] = exp(log_cnt_rate[FF] + log_offset[FF]) * map_age_to_strata / nu + epsilon;
+    alpha_strata[MF] = exp(log_cnt_rate[MF] + log_offset[MF]) * map_age_to_strata / nu + epsilon;
+    alpha_strata[FM] = exp(log_cnt_rate[FM] + log_offset[FM]) * map_age_to_strata / nu + epsilon;
 
-  {
+    for(g in 1:G){
+      for(i in 1:A){
+        yhat_strata[g,i,:] = neg_binomial_rng( alpha_strata[g,i,:], inv(nu) );
+      }
+    }
+
     vector[N] alpha_strata_flat =
     append_row(
         append_row(

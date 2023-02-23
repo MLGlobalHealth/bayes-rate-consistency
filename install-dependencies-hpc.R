@@ -1,5 +1,5 @@
 # Install the required package dependencies
-cat("Installing dependencies...")
+cat("Installing dependencies...\n")
 
 # Install / load renv
 if (require("renv")) {
@@ -15,16 +15,15 @@ if (require("renv")) {
 }
 
 # Restore the state of the project (i.e. install all dependencies)
-renv::restore(project = NULL, lockfile = "renv.lock")
+renv::restore()
 
 # Install cmdstanr and cmdstan
-cat(" Installing cmdstanr...")
-install.packages("cmdstanr",
-                 repos = c("https://mc-stan.org/r-packages/",
-                 getOption("repos")))
+cat(" Installing cmdstanr...\n")
+install.packages("https://mc-stan.org/r-packages/src/contrib/cmdstanr_0.5.2.tar.gz",
+		 repos = NULL)
 
 require("cmdstanr")
 cmdstanr::check_cmdstan_toolchain()
 cmdstanr::install_cmdstan()
 
-cat("DONE!")
+cat(" DONE!\n")

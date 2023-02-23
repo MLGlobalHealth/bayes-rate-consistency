@@ -1,15 +1,12 @@
-repo_path: "/Users/shozendan/bayes-rate-consistency"
-out_path: "/Users/shozendan/bayes-rate-consistency-output"
-
 seed: 1234
 
 data:
-  size: 2000
+  size: 1000
   covid: TRUE
   strata: "COVIMOD"
 
 model:
-  name: "hsgp-m32-rd"
+  name: "hsgp-m52-rd"
   hsgp_binf: 1.5
   hsgp_m1: 30
   hsgp_m2: 20
