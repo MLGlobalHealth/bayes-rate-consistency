@@ -1,0 +1,150 @@
+```{r}
+library(readr)
+library(data.table)
+library(ggplot2)
+```
+
+```{r message = FALSE}
+dt_participants <- as.data.table(read_csv("../data/Zimbabwe/2017_Melegaro_Zimbabwe_participant_common.csv"))
+dt_contacts <- as.data.table(read_csv("../data/Zimbabwe/2017_Melegaro_Zimbabwe_contact_common.csv"))
+dt_population <- as.data.table(read_csv("../data/Zimbabwe/zimbabwe-population-smoothed.csv"))
+```
+
+## Exploratory Data Analysis
+### Participant data
+```{r}
+# Rename to match COVIMOD and POLYMOD
+setnames(dt_participants, c("part_age", "part_gender"), c("age", "gender"))
+```
+
+```{r}
+cat("Number of participants:", nrow(dt_participants))
+```
+
+```{r}
+# Visualize the age and gender distribution
+ggplot(dt_participants, aes(x = age, fill = gender)) + 
+  geom_histogram(binwidth = 5, boundary = 0) + 
+  facet_wrap(~gender) +
+  theme_bw()
+```
+
+
+```{r}
+# If exact contact age is missing, impute with average of est_min and est_max
+# dt_contacts[is.na(cnt_age_exact), cnt_age_exact := round((cnt_age_est_max + cnt_age_est_min)/2)]
+
+# Rename to match COVIMOD
+setnames(dt_contacts, c("cnt_age_exact", "cnt_gender"), c("alter_age", "alter_gender"))
+```
+
+```{r}
+ggplot(dt_contacts, aes(alter_age, fill = alter_gender)) + 
+  geom_histogram(binwidth = 5, boundary = 0) + 
+  facet_wrap(~alter_gender) + 
+  theme_bw()
+```
+```{r}
+source("../R/stratify_age.R")
+dt_contacts <- stratify_age(dt_contacts, "alter_age", "alter_age_strata")
+
+ggplot(dt_contacts, aes(alter_age_strata, fill = alter_gender)) + 
+  geom_bar() + 
+  facet_wrap(~alter_gender) + 
+  theme_bw() + 
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+Note: We will treat the missing contacts as missing or aggregated contacts
+
+## Empirical contact intensities
+```{r}
+library(data.table)
+
+# Define Cartesian grid
+dt_grid <- data.table(
+  expand.grid(
+    age = seq(0, 84), 
+    gender = c("M", "F"),
+    alter_age_strata = c("0-4","5-9","10-14","15-19","20-24","25-34","35-44",
+                         "45-54","55-64","65-69","70-74","75-79","80-84"),
+    alter_gender = c("M", "F")
+  )
+)
+
+# Count number of participants by age group and gender
+dt_participants_count <- dt_participants[, .(N = .N), by = .(age, gender)]
+
+# Merge Cartesian grid with participants count
+dt_all <- merge(dt_grid, dt_participants_count, 
+                by = c("age", "gender"), 
+                all.x = TRUE)
+
+# Merge contacts table with participants table
+dt_merged <- merge(dt_contacts, 
+                   dt_participants, 
+                   by = "part_id", 
+                   all.x = TRUE)
+
+# Compute aggregated contact counts
+dt_agg_contacts <- dt_merged[, .(y = .N), by = .(age, gender, alter_age_strata, alter_gender)]
+
+# Exclude participants with missing age or gender information
+dt_agg_contacts <- dt_agg_contacts[complete.cases(dt_agg_contacts[, .(age, gender)])]
+
+# Merge all tables together
+dt_all <- merge(dt_all, dt_agg_contacts, 
+                by = c("age", "gender", "alter_age_strata", "alter_gender"), 
+                all.x = TRUE)
+dt_all[!is.na(N) & is.na(y), y := 0]
+
+# Compute number of contacts with missing age or gender information for each age-gender pair group
+dt_missing_contacts <- dt_agg_contacts[is.na(alter_age_strata) | is.na(alter_gender), .(Z = sum(y)), by = .(age, gender)]
+
+# Compute number of contacts with complete age and gender information
+dt_complete_contacts <- dt_agg_contacts[!is.na(alter_age_strata) & !is.na(alter_gender), .(Y = sum(y)), by = .(age, gender)]
+
+# Merge complete and missing contacts with age and gender grid
+dt_age_gender_all <- merge(dt_grid, 
+                           dt_complete_contacts, 
+                           by = c("age", "gender"), 
+                           all.x = TRUE)
+dt_age_gender_all <- merge(dt_age_gender_all, 
+                           dt_missing_contacts, 
+                           by = c("age", "gender"), 
+                           all.x = TRUE)
+
+# Compute S variable
+dt_age_gender_all[, S := Y / (Y + Z)]
+dt_age_gender_all[is.na(S), S := 1]
+
+# Merge all tables together
+dt_all <- merge(dt_all, 
+                dt_age_gender_all, 
+                by = c("age", "gender", "alter_age_strata", "alter_gender"), 
+                all.x = TRUE)
+dt_all <- dt_all[!is.na(N)]
+
+# Compute m variable
+dt_all[, m := y / N / S]
+```
+
+```{r}
+ggplot(dt_all[m < 20], aes(age, alter_age_strata)) + 
+  geom_tile(aes(fill = m)) + 
+  viridis::scale_fill_viridis(option = "H") + 
+  scale_x_continuous(expand = c(0,0)) + 
+  labs(x = "Age of participant", y = "Age of contact") + 
+  facet_grid(gender~alter_gender) + 
+  theme_bw() + 
+  theme(
+    aspect.ratio = 1,
+    strip.background = element_blank()
+  )
+```
+
+```{r}
+
+```
+

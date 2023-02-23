@@ -1,0 +1,173 @@
+```{r}
+# Load libraries
+library(readr)
+library(data.table)
+library(ggplot2)
+library(cmdstanr)
+library(splines)
+```
+
+```{r message = FALSE}
+# Load data
+dt_population <- as.data.table(read_csv("../data/Zimbabwe/zimbabwe-population-5yr-2017.csv"))
+```
+
+```{r}
+age_group_levels <- unique(dt_population[, age_group])
+dt_population[, age_group := factor(age_group, levels = age_group_levels)]
+
+ggplot(dt_population, aes(age_group, pop, fill = gender)) + 
+  geom_bar(stat = "identity") + 
+  labs(x = "Age group", y = "Population", fill = "Gender") +
+  facet_wrap(~gender) + 
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+
+```{r}
+A <- 85
+C <- 17
+
+spline_bases <- bs(x = seq(0, A - 1), 
+                   df = 10, 
+                   degree = 3, 
+                   intercept = TRUE)
+
+stan_data <- list(
+ A = A,
+ C = C,
+ DF = ncol(spline_bases),
+ Y_M = dt_population[gender == "Male", pop],
+ Y_F = dt_population[gender == "Female", pop],
+ B = spline_bases
+)
+
+age_strata_map <- matrix(0, nrow = A, ncol = 17)
+for (j in 1:C) {
+    for (i in 1:5) age_strata_map[(j - 1)*5 + i, j] <- 1;
+}
+
+stan_data$age_strata_map <- age_strata_map
+```
+
+## Compile Stan model
+```{r}
+model <- cmdstan_model("../stan_models/bs-population-smoothing.stan", 
+                       compile = TRUE)
+```
+
+## Fit Stan model
+```{r}
+baseline <- log(mean(dt_population[, pop]) / 5)
+stan_init <- function() list(beta0_M = baseline + rnorm(1, 0, 0.1), 
+                             beta0_F = baseline + rnorm(1, 0, 0.1))
+
+fit <- model$sample(data = stan_data,
+                    seed = 1234,
+                    chains = 4,
+                    parallel_chains = 4,
+                    iter_warmup = 500,
+                    iter_sampling = 2000,
+                    max_treedepth = 10,
+                    init = stan_init)
+
+fit$cmdstan_diagnose()
+fit$summary(variables = c("beta0_M", "beta0_F", "beta_M", "beta_F", "inv_scale"))
+```
+
+```{r}
+posterior_draws <- fit$draws(variables = c("beta0_M", "beta0_F", "inv_scale"))
+bayesplot::mcmc_trace(posterior_draws,
+                      facet_args = list(nrow = 3, ncol = 1))
+```
+
+```{r}
+posterior_lambda <- function(fit, gender = "Male") {
+  ps <- c(0.5, 0.025, 0.975)
+  p_labs <- c('M','CL','CU')
+  
+  variable <- ifelse(gender == "Male", "lambda_M", "lambda_F")
+  
+  posterior_draws <- fit$draws(variables = variable,
+                               format = "draws_matrix")
+  dt_posterior <- melt(as.data.table(posterior_draws))
+  age_idx <- stringr::str_match(dt_posterior[, variable], "\\[([0-9]+)\\]")[,2]
+  dt_posterior$age <- as.integer(age_idx) - 1
+  
+  # Calculate quantiles 
+  dt_posterior <- dt_posterior[, .(q = quantile(value, prob = ps, na.rm = T), q_label = p_labs), 
+                               by = age]
+  dt_posterior <- data.table::dcast(dt_posterior, age ~ q_label, value.var = "q")
+  
+  dt_posterior[, gender := gender]
+  
+  return(dt_posterior)
+}
+
+dt_posterior_lambda_M <- posterior_lambda(fit, gender = "Male")
+dt_posterior_lambda_F <- posterior_lambda(fit, gender = "Female")
+
+dt_posterior_lambda <- rbind(
+  dt_posterior_lambda_M,
+  dt_posterior_lambda_F
+)
+
+ggplot(dt_posterior_lambda, aes(age, M)) + 
+  geom_ribbon(aes(ymin = CL, ymax = CU, fill = gender), alpha = 0.3) + 
+  geom_line(aes(color = gender)) + 
+  scale_x_continuous(expand = c(0,0)) + 
+  theme_bw()
+```
+
+```{r}
+dt_posterior_lambda[, pop := M]
+write_csv(dt_posterior_lambda[, .(age, gender, pop)], "../data/Zimbabwe/zimbabwe-population-smoothed.csv")
+```
+
+
+```{r}
+ps <- c(0.5, 0.025, 0.975)
+p_labs <- c('M','CL','CU')
+
+po_yhat_m <- fit$draws(variables = c("Yhat_M"), format = "draws_matrix")
+
+dt_po_yhat_m <- as.data.table(melt(po_yhat_m))
+age_idx <- stringr::str_match(dt_po_yhat_m[, variable], "\\[([0-9]+)\\]")[,2]
+dt_po_yhat_m$age <- as.integer(age_idx) - 1
+
+# Calculate quantiles
+dt_po_yhat_m <- dt_po_yhat_m[, .(q = quantile(value, prob = ps, na.rm = T), q_label = p_labs), by = age]
+dt_po_yhat_m <- data.table::dcast(dt_po_yhat_m, age ~ q_label, value.var = "q")
+
+
+po_yhat_f <- fit$draws(variables = c("Yhat_F"), format = "draws_matrix")
+
+dt_po_yhat_f <- as.data.table(melt(po_yhat_f))
+age_idx <- stringr::str_match(dt_po_yhat_f[, variable], "\\[([0-9]+)\\]")[,2]
+dt_po_yhat_f$age <- as.integer(age_idx) - 1
+
+# Calculate quantiles
+dt_po_yhat_f <- dt_po_yhat_f[, .(q = quantile(value, prob = ps, na.rm = T), q_label = p_labs), by = age]
+dt_po_yhat_f <- data.table::dcast(dt_po_yhat_f, age ~ q_label, value.var = "q")
+
+dt_po_yhat_m$gender <- "Male"
+dt_po_yhat_f$gender <- "Female"
+
+dt_po_yhat <- rbind(dt_po_yhat_m, dt_po_yhat_f)
+dt_po_yhat[, age_group := unique(dt_population[,age_group][age+1]), by=age]
+
+dt_po <- merge(dt_population, dt_po_yhat)
+
+dt_po[, inside_CI := between(pop, CL, CU)]
+mean(dt_po$inside_CI)
+```
+
+```{r}
+ggplot(dt_po, aes(idx, pop, color = gender)) + 
+  geom_point() + 
+  geom_errorbar(aes(y = M, ymin = CL, ymax = CU)) + 
+  facet_wrap(~gender)
+```
+

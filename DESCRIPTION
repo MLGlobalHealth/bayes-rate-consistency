@@ -15,5 +15,6 @@ Depends:
   posterior (>= 1.2),
   bayesplot (>= 1.8),
   loo (>= 2.5),
-  pammtools,
-  viridis
+  viridis,
+  ggsci,
+  patchwork
