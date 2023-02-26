@@ -23,16 +23,12 @@ option_list <- list(
   make_option(c("--config"), type = "character", default = NA, help = "configuration file", dest = "config_file")
 )
 cli_args <- parse_args(OptionParser(option_list = option_list))
-config <- read_yaml(file.path(getwd(),
-                              "config",
-                              cli_args$config_file))
 
+config <- read_yaml(file.path(getwd(), "config", cli_args$config_file))
 model_name <- paste(config$model$name,
                     str_remove(cli_args$config_file, ".yml"),
                     sep = "-")
-
-model_path <- file.path(getwd(), "stan_fits", paste0(model_name, ".rds"))
-
+model_path <- file.path(repo$out_path, "stan_fits", paste0(model_name, ".rds"))
 data_path <- file.path(getwd(), "data", config$data$path)
 
 # Error handling
@@ -46,7 +42,7 @@ if (!file.exists(data_path)) {
 }
 
 # Output directories
-export_path <- file.path(cli_args$repo_path, "results", config$model$name)
+export_path <- file.path(cli_args$out_path, "results", config$model$name)
 export_fig_path <- file.path(export_path, "figures")
 if (!dir.exists(export_path)) {
   dir.create(export_path, recursive = TRUE)
@@ -67,7 +63,7 @@ data <- readRDS(data_path)
 # Unpack data
 dt_contacts <- data$contacts
 dt_offsets <- data$offsets
-dt_population <- data$pop
+dt_population <- data$population
 
 # Load helpers
 source(file.path(cli_args$repo_path, "R/convergence_diagnositic_stats.R"))
