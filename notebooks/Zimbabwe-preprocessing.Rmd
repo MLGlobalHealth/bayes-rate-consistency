@@ -1,0 +1,151 @@
+
+```{r}
+library(readr)
+library(data.table)
+library(ggplot2)
+```
+
+```{r message=FALSE}
+# Read data
+dt_participants <- as.data.table(read_csv("../data/Zimbabwe/2017_Melegaro_Zimbabwe_participant_common.csv"))
+dt_contacts <- as.data.table(read_csv("../data/Zimbabwe/2017_Melegaro_Zimbabwe_contact_common.csv"))
+dt_population <- as.data.table(read_csv("../data/Zimbabwe/zimbabwe-population-smoothed.csv"))
+```
+
+## Participant Data
+```{r}
+# Check the proportion of missing data
+nrow(dt_participants[is.na(part_gender)]) / nrow(dt_participants)
+
+# Exclude participants with missing age and gender
+dt_participants <- dt_participants[!(is.na(part_gender) | is.na(part_age))]
+
+nrow(dt_participants)
+```
+
+## Contacts
+### Contacts with missing age and gender information
+```{r}
+dt_incomplete <- dt_contacts[is.na(cnt_age_exact) | is.na(cnt_gender)]
+
+# Append participant info
+dt_incomplete <- merge(dt_incomplete[,.(part_id)], 
+                       dt_participants, 
+                       by = c("part_id"), 
+                       all.x = TRUE)
+
+# Count the number of contacts with missing age or gender information.
+dt_incomplete <- dt_incomplete[, .(y_incomplete = .N), by = c("part_age", "part_gender")]
+setnames(dt_incomplete, c("part_age", "part_gender"), c("age", "gender"))
+
+# Remove ambiguous contacts from original nhh data
+dt_contacts <- dt_contacts[!(is.na(cnt_age_exact) | is.na(cnt_gender))]
+```
+
+```{r}
+# Merge with participant data
+dt_contacts <- merge(dt_contacts, 
+                     dt_participants, 
+                     by = c("part_id"), 
+                     all.x = TRUE)
+
+# Aggregate contacts
+dt_contacts <- dt_contacts[, .(y = .N), by = .(part_age, part_gender, cnt_age_exact, cnt_gender)]
+setnames(dt_contacts, c("part_age", "part_gender"), c("age", "gender"))
+```
+
+```{r}
+# Participant size by wave and repetition
+dt_part_size <- dt_participants[, .(N = .N), by = .(part_age, part_gender)]
+setnames(dt_part_size, c("part_age", "part_gender"), c("age", "gender"))
+
+# Aggregate age-gender-specific contacts
+dt_contacts_sum <- dt_contacts[, .(y = sum(y, na.rm = T)), by = .(age, gender)]
+
+setnames(dt_incomplete, "y_incomplete", "y")
+
+# Total number of contacts (specific + ambiguous + group)
+dt_total <- rbind(dt_contacts_sum, dt_incomplete)
+dt_total <- dt_total[,.(y_total = sum(y, na.rm = T)), by = .(age, gender)]
+
+# Calculate S term
+dt_offsets <- merge(dt_contacts_sum, dt_total, 
+                    by = c("age", "gender"), 
+                    all.x = TRUE)
+dt_offsets[, S := y / y_total]
+dt_offsets[, S := ifelse(is.nan(S), 1, S)]
+
+# Offset terms
+dt_offsets <- merge(dt_part_size, 
+                    dt_offsets[,.(age, gender, S)], 
+                    by = c("age", "gender"), 
+                    all.x = T)
+dt_offsets[is.na(S), S := 1]
+```
+
+```{r}
+# Remove participants and contacts 85+
+dt_contacts <- dt_contacts[!(age > 84 | cnt_age_exact > 84)]
+dt_offsets <- dt_offsets[age <= 84]
+
+dt_contacts[, `:=`(gender = ifelse(gender == "M", "Male", "Female"),
+                   cnt_gender = ifelse(cnt_gender == "M", "Male", "Female"))]
+dt_offsets[, gender := ifelse(gender == "M", "Male", "Female")]
+
+dt_grid <- as.data.table(
+  expand.grid(
+    age = seq(0, 84),
+    gender = c("Male", "Female"),
+    cnt_age_exact = seq(0, 84),
+    cnt_gender = c("Male", "Female")
+  )
+)
+
+dt_contacts <- merge(dt_grid, 
+                     dt_contacts, 
+                     by = c("age", "gender", "cnt_age_exact", "cnt_gender"), 
+                     all.x = TRUE)
+dt_contacts <- merge(dt_contacts, 
+                     dt_offsets, 
+                     by = c("age", "gender"), 
+                     all.x = TRUE)
+
+# Impute true zeroes
+dt_contacts <- dt_contacts[!is.na(N)]
+dt_contacts <- dt_contacts[is.na(y), S := 1]
+dt_contacts <- dt_contacts[is.na(y), y := 0]
+
+setnames(dt_contacts, c("cnt_age_exact", "cnt_gender"), c("alter_age", "alter_gender"))
+```
+
+```{r}
+data <- list(
+  contacts = dt_contacts,
+  offsets = dt_offsets,
+  population = dt_population
+)
+
+saveRDS(data, "../data/Zimbabwe/Zimbabwe_single_age.rds")
+```
+
+```{r}
+source("../R/stratify_age.R")
+
+# Stratify age
+dt_contacts <- stratify_age(dt_contacts, name = "alter_age", strat_name = "alter_age_strata")
+dt_contacts <- dt_contacts[, .(y = sum(y),
+                               N = mean(N),
+                               S = mean(S)),
+                           by = .(age, gender, alter_age_strata, alter_gender)]
+
+data <- list(
+  contacts = dt_contacts,
+  offsets = dt_offsets,
+  population = dt_population
+)
+
+saveRDS(data, "../data/Zimbabwe/Zimbabwe_stratified_age.rds")
+```
+
+
+
