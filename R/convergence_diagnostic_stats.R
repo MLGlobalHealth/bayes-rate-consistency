@@ -1,7 +1,7 @@
 library(cmdstanr)
 library(loo)
 
-#' Make convergence diagnostic statistics
+#' Convergence diagnostic statistics
 #'
 #' This function computes various convergence diagnostic statistics and saves the outputs as RDS files.
 #' It also returns a summary table of estimates and diagnostics from a fitted CmdStanModel object.
@@ -29,7 +29,7 @@ library(loo)
 #' }
 #'
 #' @export
-make_convergence_diagnostic_stats <- function(fit, outdir = NA) {
+convergence_diagnostic_stats <- function(fit, outdir = NA) {
   fit_summary <- fit$summary()
 
   # Effective sample size and Rhat

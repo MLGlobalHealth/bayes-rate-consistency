@@ -1,0 +1,16 @@
+seed: 1234
+
+data:
+  size: 5000
+  covid: FALSE
+  strata: "COVIMOD"
+
+model:
+  name: "hsgp-m52-rd"
+  hsgp_binf: 1.5
+  hsgp_m1: 30
+  hsgp_m2: 20
+  chains: 4
+  warmup: 500
+  sampling: 1500
+  max_treedepth: 13

@@ -41,7 +41,7 @@ sim_posterior_contact_intensity <- function(fit, dt_population, type="matrix", o
                                   gender_pair_idx %in% c(2,3), "Female", default = NA)]
 
     # Load datasets
-    dt_posterior <- merge(dt_posterior, dtp, by=c("alter_age", "alter_gender"), all.x = TRUE)
+    dt_posterior <- merge(dt_posterior, dt_population, by=c("alter_age", "alter_gender"), all.x = TRUE)
 
     dt_posterior[, intensity_M := M * pop]
     dt_posterior[, intensity_CL := CL * pop]
@@ -62,7 +62,7 @@ sim_posterior_contact_intensity <- function(fit, dt_population, type="matrix", o
     dt_male[, alter_age := alter_age_idx + 5]
 
     dt_male <- merge(dt_male,
-                     dt_population[gender == "Male"],
+                     dt_population[alter_gender == "Male"],
                      by = "alter_age",
                      all.x = TRUE)
     dt_male <- dt_male[, .(value = sum(exp(value + log(pop)))), by=c("draw", "age")]
@@ -75,7 +75,7 @@ sim_posterior_contact_intensity <- function(fit, dt_population, type="matrix", o
     dt_female[, alter_age := alter_age_idx + 5]
 
     dt_female <- merge(dt_female,
-                       dt_population[gender == "Female"],
+                       dt_population[alter_gender == "Female"],
                        by = "alter_age",
                        all.x = TRUE)
     dt_female <- dt_female[, .(value = sum(exp(value + log(pop)))), by=c("draw", "age")]
@@ -107,7 +107,7 @@ extract_posterior_rates <- function(fit){
   indices <- str_match(dt_po$variable, pattern)[,2:4]
   dt_po$gender_pair_idx <- as.numeric(indices[,1])
   dt_po$age_idx <- as.numeric(indices[,2])
-  dt_po$alter_age_strata_idx <- as.numeric(indices[,3])
+  dt_po$alter_age_idx <- as.numeric(indices[,3])
 
   return(dt_po)
 }

@@ -175,11 +175,11 @@ add_contact_vector <- function(stan_data,
 add_N <- function(stan_data, single_wave = TRUE){
 
   if (single_wave) {
-
     stan_data$N_MM <- length(stan_data$Y_MM)
     stan_data$N_FF <- length(stan_data$Y_FF)
     stan_data$N_MF <- length(stan_data$Y_MF)
     stan_data$N_FM <- length(stan_data$Y_FM)
+    
   } else {
 
     stan_data$N_M <- length(stan_data$Y_MM)
@@ -248,7 +248,6 @@ add_row_major_idx <- function(stan_data,
     stan_data$ROW_MAJOR_IDX_FM <- d[gender == "Female" & alter_gender == "Male"]$row_major_idx
 
     return(stan_data)
-
   } else {
 
     d <- dt_contacts[order(u, age, alter_age_strata, gender, alter_gender)]
@@ -261,7 +260,6 @@ add_row_major_idx <- function(stan_data,
     stan_data$ROW_MAJOR_IDX_F <- d[gender == "Female" & alter_gender == "Female"]$row_major_idx
 
     return(stan_data)
-
   }
 }
 
@@ -481,8 +479,8 @@ add_age_strata_map <- function(stan_data,
     # add map to Stan_data
     stan_data$map_age_to_strata <- map_age_to_strata
     return(stan_data)
-  } else {
 
+  } else {
     # create identity matrix to map age to age strata for POLYMOD survey
     map_age_to_strata <- diag(rep(1, stan_data$A))
 
