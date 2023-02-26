@@ -82,7 +82,8 @@ cat("\n Making trace plots")
 
 pars <- c('nu', 'gp_alpha', 'gp_rho_1', 'gp_rho_2')
 pars_po <- fit$draws(pars)
-p <- bayesplot::mcmc_trace(pars_po)
+p <- bayesplot::mcmc_trace(pars_po,
+                           facet_args = list(nrow = 10, col = 1))
 ggsave(file = file.path(export_fig_path, 'mcmc_trace_parameters.png'),
        plot = p,
        h = 20,
@@ -91,7 +92,8 @@ ggsave(file = file.path(export_fig_path, 'mcmc_trace_parameters.png'),
 
 # Make pairs plots
 cat(" Making pairs plots\n")
-p <- bayesplot::mcmc_pairs(pars_po, off_diag_args = list(size = 0.3, alpha = 0.3))
+p <- bayesplot::mcmc_pairs(pars_po,
+                           off_diag_args = list(size = 0.3, alpha = 0.3))
 ggsave(file = file.path(export_fig_path, 'mcmc_pairs_parameters.png'),
        plot = p,
        h = 20,
