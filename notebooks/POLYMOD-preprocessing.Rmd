@@ -154,7 +154,7 @@ data <- list(
   population = dt_population
 )
 
-saveRDS(data, "~/bayes-rate-consistency/data/POLYMOD/polymod-single-age.rds")
+saveRDS(data, "~/bayes-rate-consistency/data/POLYMOD/polymod_single_age.rds")
 ```
 
 ```{r}
@@ -169,6 +169,6 @@ dt_contacts <- dt_contacts[, .(y = sum(y, na.rm = T),
 
 data$contacts <- dt_contacts
 
-saveRDS(data, "~/bayes-rate-consistency/data/POLYMOD/polymod-stratify-age.rds")
+saveRDS(data, "~/bayes-rate-consistency/data/POLYMOD/polymod_stratify_age.rds")
 ```
 
