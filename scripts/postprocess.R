@@ -147,11 +147,11 @@ if(args$plot){
   cat(" Extracting posterior contact intensities ...\n")
   dt.po <- extract_posterior_intensity(po, dt.pop)
 
-  #dt.matrix <- summarise_posterior_intensity(dt.po, type="matrix", outdir=export.path)
-  #dt.sliced <- summarise_posterior_intensity(dt.po, dt.off, type="sliced", outdir=export.path)
+  dt.matrix <- summarise_posterior_intensity(dt.po, type="matrix", outdir=export.path)
+  dt.sliced <- summarise_posterior_intensity(dt.po, dt.off, type="sliced", outdir=export.path)
   dt.margin.a <- summarise_posterior_intensity(dt.po, type="margin-a", outdir=export.path)
-  #dt.margin.b <- summarise_posterior_intensity(dt.po, type="margin-b", outdir=export.path)
-  #dt.margin.c <- summarise_posterior_intensity(dt.po, dt.off, type="margin-c", outdir=export.path)
+  dt.margin.b <- summarise_posterior_intensity(dt.po, type="margin-b", outdir=export.path)
+  dt.margin.c <- summarise_posterior_intensity(dt.po, dt.off, type="margin-c", outdir=export.path)
 }
 
 cat("\n DONE.\n")

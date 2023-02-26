@@ -1,36 +1,55 @@
 make_stan_data <- function(A,
                            C,
-                           W,
                            dt_contacts,
                            dt_offsets,
                            dt_population,
-                           survey,
-                           model_params){
-  if (survey == "COVIMOD") {
-    stan_data <- init_stan_data(A, C, W)
-    stan_data <- add_contact_vector(stan_data, dt_contacts)
-    stan_data <- add_N(stan_data)
-    stan_data <- add_row_major_idx(stan_data, dt_contacts)
-    stan_data <- add_start_end_idx(stan_data, dt_contacts)
-    stan_data <- add_participant_offsets(stan_data, dt_contacts)
-    stan_data <- add_population_offsets(stan_data, dt_population)
-    stan_data <- add_wave_repeat_u_map(stan_data)
-    stan_data <- add_age_strata_map(stan_data)
+                           model_params,
+                           single_wave = TRUE,
+                           waves = NULL,
+                           single_contact_age = FALSE){
+  if (single_wave) {
 
-  } else if (survey == "POLYMOD") {
     stan_data <- init_stan_data(A, C)
-    stan_data <- add_contact_vector(stan_data,
-                                    dt_contacts,
-                                    single_wave = TRUE,
-                                    survey = "POLYMOD")
-    stan_data <- add_N(stan_data, survey = "POLYMOD")
-    stan_data <- add_row_major_idx(stan_data, dt_contacts, survey = "POLYMOD")
-    stan_data <- add_participant_offsets(stan_data, dt_contacts, dt_offsets, survey = "POLYMOD")
-    stan_data <- add_population_offsets(stan_data, dt_population, survey = "POLYMOD")
-    stan_data <- add_age_strata_map(stan_data, survey = "POLYMOD")
+    stan_data <- add_participant_offsets(stan_data,
+                                         dt_contacts,
+                                         dt_offsets)
+    stan_data <- add_population_offsets(stan_data, dt_population)
+
+    if (!single_contact_age) {
+
+      stan_data <- add_contact_vector(stan_data, dt_contacts)
+      stan_data <- add_row_major_idx(stan_data, dt_contacts)
+      stan_data <- add_age_strata_map(stan_data)
+    } else {
+
+      stan_data <- add_contact_vector(stan_data,
+                                      dt_contacts,
+                                      single_contact_age = TRUE)
+      stan_data <- add_row_major_idx(stan_data,
+                                     dt_contacts,
+                                     single_contact_age = TRUE)
+      stan_data <- add_age_strata_map(stan_data, single_contact_age = TRUE)
+    }
+
+    stan_data <- add_N(stan_data, single_wave = TRUE)
 
   } else {
-    stop("Invalid survey type")
+
+    stan_data <- init_stan_data(A, C, waves)
+    stan_data <- add_contact_vector(stan_data,
+                                    dt_contacts,
+                                    single_wave = FALSE)
+    stan_data <- add_N(stan_data, single_wave = FALSE)
+    stan_data <- add_row_major_idx(stan_data, dt_contacts)
+    stan_data <- add_start_end_idx(stan_data, dt_contacts)
+    stan_data <- add_participant_offsets(stan_data,
+                                         dt_contacts,
+                                         single_wave = FALSE)
+    stan_data <- add_population_offsets(stan_data,
+                                        dt_population,
+                                        single_wave = FALSE)
+    stan_data <- add_wave_repeat_u_map(stan_data)
+    stan_data <- add_age_strata_map(stan_data)
   }
 
   stan_data <- add_non_nuisance_idx(stan_data)
@@ -123,24 +142,23 @@ make_grid <- function(A, U = NULL, gender = FALSE) {
 #' @param dt_contacts A data.table object containing the contact count data to be used to
 #'                    generate the contact count vectors.
 #' @param single_wave A logical value indicating whether the contact count data is from a
-#'                    single wave survey (default: \code{FALSE}).
-#' @param survey A character string indicating the name of the survey from which
-#'               the contact data was collected. Must be one of "COVIMOD" or
-#'               "POLYMOD" (default: "COVIMOD").
+#'                    single wave survey (default: \code{TRUE}).
+#' @param single_contact_age A logical value indicating whether the age of contact is in one year
+#'                           intervals or aggregated into age groups (default: \code{FALSE})
 #'
 #' @return The Stan data object with contact count vectors added to it
 add_contact_vector <- function(stan_data,
                                dt_contacts,
-                               single_wave = FALSE,
-                               survey = "COVIMOD"){
-  if (survey == "COVIMOD") {
-    if (single_wave) {
+                               single_wave = TRUE,
+                               single_contact_age = FALSE){
+  if (single_wave) {
+    if (!single_contact_age) {
       sort_order <- c("age", "alter_age_strata", "gender", "alter_gender")
     } else {
-      sort_order <- c("u", "age", "alter_age_strata", "gender", "alter_gender")
+      sort_order <- c("age", "alter_age", "gender", "alter_gender")
     }
-  } else if (survey == "POLYMOD") {
-    sort_order <- c("age", "alter_age", "gender", "alter_gender")
+  } else {
+    sort_order <- c("u", "age", "alter_age_strata", "gender", "alter_gender")
   }
 
   dt <- dt_contacts[, .(y), keyby = sort_order]
@@ -154,18 +172,18 @@ add_contact_vector <- function(stan_data,
 }
 
 # Add observation count
-add_N <- function(stan_data, survey = "COVIMOD"){
+add_N <- function(stan_data, single_wave = TRUE){
 
-  if(survey == "COVIMOD"){
-    stan_data$N_M <- length(stan_data$Y_MM)
-    stan_data$N_F <- length(stan_data$Y_FF)
-  }
-
-  if(survey == "POLYMOD"){
+  if (single_wave) {
     stan_data$N_MM <- length(stan_data$Y_MM)
     stan_data$N_FF <- length(stan_data$Y_FF)
     stan_data$N_MF <- length(stan_data$Y_MF)
     stan_data$N_FM <- length(stan_data$Y_FM)
+    
+  } else {
+
+    stan_data$N_M <- length(stan_data$Y_MM)
+    stan_data$N_F <- length(stan_data$Y_FF)
   }
 
   return(stan_data)
@@ -179,8 +197,10 @@ add_N <- function(stan_data, survey = "COVIMOD"){
 #'
 #' @param stan_data Stan data object to be modified
 #' @param dt_contacts Contact data in a data.table object
-#' @param survey Character string indicating the survey type, either "COVIMOD"
-#'   or "POLYMOD". Default is "COVIMOD".
+#' @param single_wave A logical value indicating whether the contact count data is from a
+#'                    single wave survey (default: \code{TRUE}).
+#' @param single_contact_age A logical value indicating whether the age of contact is in one year
+#'                           intervals or aggregated into age groups (default: \code{FALSE})
 #'
 #' @return Stan data object with row-major index added
 #'
@@ -199,31 +219,45 @@ add_N <- function(stan_data, survey = "COVIMOD"){
 #' @importFrom data.table order
 #'
 #' @export
-add_row_major_idx <- function(stan_data, dt_contacts, survey = "COVIMOD"){
-  if (survey == "COVIMOD"){
-    d <- dt_contacts[order(u, age, alter_age_strata, gender, alter_gender)]
+add_row_major_idx <- function(stan_data,
+                              dt_contacts,
+                              single_wave = TRUE,
+                              single_contact_age = FALSE){
+  A <- stan_data$A
+  C <- stan_data$C
 
-    d[, age_idx := age + 1]
-    d[, age_strata_idx := as.numeric(alter_age_strata)]
-    d[, row_major_idx := (age_idx-1)*13 + age_strata_idx]
+  if (single_wave) {
 
-    stan_data$ROW_MAJOR_IDX_M <- d[gender == "Male" & alter_gender == "Male"]$row_major_idx
-    stan_data$ROW_MAJOR_IDX_F <- d[gender == "Female" & alter_gender == "Female"]$row_major_idx
+    if (!single_contact_age) {
 
-    return(stan_data)
-  }
+      d <- dt_contacts[order(age, alter_age_strata, gender, alter_gender)]
+      d[, age_idx := age + 1]
+      d[, age_strata_idx := as.numeric(alter_age_strata)]
+      d[, row_major_idx := (age_idx-1)*C + age_strata_idx]
 
-  if (survey == "POLYMOD"){
-    d <- dt_contacts[order(age, alter_age, gender, alter_gender)]
-
-    d[, age_idx := age + 1]
-    d[, age_strata_idx := alter_age + 1]
-    d[, row_major_idx := (age_idx-1)*85 + age_strata_idx]
+    } else {
+      d <- dt_contacts[order(age, alter_age, gender, alter_gender)]
+      d[, age_idx := age + 1]
+      d[, age_strata_idx := alter_age + 1]
+      d[, row_major_idx := (age_idx-1)*C + age_strata_idx]
+    }
 
     stan_data$ROW_MAJOR_IDX_MM <- d[gender == "Male" & alter_gender == "Male"]$row_major_idx
     stan_data$ROW_MAJOR_IDX_FF <- d[gender == "Female" & alter_gender == "Female"]$row_major_idx
     stan_data$ROW_MAJOR_IDX_MF <- d[gender == "Male" & alter_gender == "Female"]$row_major_idx
     stan_data$ROW_MAJOR_IDX_FM <- d[gender == "Female" & alter_gender == "Male"]$row_major_idx
+
+    return(stan_data)
+  } else {
+
+    d <- dt_contacts[order(u, age, alter_age_strata, gender, alter_gender)]
+
+    d[, age_idx := age + 1]
+    d[, age_strata_idx := as.numeric(alter_age_strata)]
+    d[, row_major_idx := (age_idx-1)*C + age_strata_idx]
+
+    stan_data$ROW_MAJOR_IDX_M <- d[gender == "Male" & alter_gender == "Male"]$row_major_idx
+    stan_data$ROW_MAJOR_IDX_F <- d[gender == "Female" & alter_gender == "Female"]$row_major_idx
 
     return(stan_data)
   }
@@ -288,7 +322,8 @@ add_start_end_idx <- function(stan_data, dt_contacts){
 #' @param stan_data A Stan data object
 #' @param dt_contacts A data table containing information about the contacts
 #' @param dt_offsets A data table containing information about the participants (optional, defaults to NULL)
-#' @param survey A character string indicating the survey type, either "COVIMOD" or "POLYMOD" (optional, defaults to "COVIMOD")
+#' @param single_wave A logical value indicating whether the contact count data is from a
+#'                    single wave survey (default: \code{TRUE}).
 #'
 #' @return A Stan data object with participant offsets added
 #'
@@ -298,20 +333,9 @@ add_start_end_idx <- function(stan_data, dt_contacts){
 add_participant_offsets <- function(stan_data,
                              dt_contacts,
                              dt_offsets = NULL,
-                             survey = "COVIMOD"){
+                             single_wave = TRUE){
 
-  if (survey == "COVIMOD") {
-    # get the number of participants and zeta values for males and females
-    d_M <- dt_contacts[gender == "Male" & alter_gender == "Male"]
-    d_F <- dt_contacts[gender == "Female" & alter_gender == "Female"]
-
-    stan_data$part_M <- d_M$N
-    stan_data$part_F <- d_F$N
-
-    stan_data$S_M <- d_M$zeta
-    stan_data$S_F <- d_F$zeta
-
-  } else if (survey == "POLYMOD") {
+  if (single_wave) {
     # get the log of N and zeta values for males and females
     d_M <- complete(dt_offsets[gender == "Male"], age = 0:84, fill = list(N = 1, zeta = 1))
     d_F <- complete(dt_offsets[gender == "Female"], age = 0:84, fill = list(N = 1, zeta = 1))
@@ -321,7 +345,16 @@ add_participant_offsets <- function(stan_data,
 
     stan_data$log_S_M <- log(d_M$zeta)
     stan_data$log_S_F <- log(d_F$zeta)
+  } else {
+    # get the number of participants and zeta values for males and females
+    d_M <- dt_contacts[gender == "Male" & alter_gender == "Male"]
+    d_F <- dt_contacts[gender == "Female" & alter_gender == "Female"]
 
+    stan_data$part_M <- d_M$N
+    stan_data$part_F <- d_F$N
+
+    stan_data$S_M <- d_M$zeta
+    stan_data$S_F <- d_F$zeta
   }
 
   return(stan_data)
@@ -335,25 +368,23 @@ add_participant_offsets <- function(stan_data,
 #'
 #' @param stan_data The data in the format expected by the Stan model
 #' @param dt_population A data.table containing population sizes by gender and age
-#' @param survey The name of the survey, either "COVIMOD" or "POLYMOD"
+#' @param single_wave A logical value indicating whether the contact count data is from a
+#'                    single wave survey (default: \code{TRUE}).
 #'
 #' @return The modified Stan data with population offsets added
-add_population_offsets <- function(stan_data, dt_population, survey = "COVIMOD"){
-
+add_population_offsets <- function(stan_data,
+                                   dt_population,
+                                   single_wave = TRUE){
   A <- stan_data$A
 
-  if(survey == "COVIMOD"){
-
-    stan_data$pop_M <- dt_population[gender == "Male" & age < A]$pop
-    stan_data$pop_F <- dt_population[gender == "Female" & age < A]$pop
-
-  } else if(survey == "POLYMOD"){
+  if (single_wave) {
 
     stan_data$log_P_M <- log(dt_population[gender == "Male" & age < A]$pop)
     stan_data$log_P_F <- log(dt_population[gender == "Female" & age < A]$pop)
-
   } else {
-    stop("Invalid survey type")
+
+    stan_data$pop_M <- dt_population[gender == "Male" & age < A]$pop
+    stan_data$pop_F <- dt_population[gender == "Female" & age < A]$pop
   }
 
   return(stan_data)
@@ -404,17 +435,26 @@ add_wave_repeat_u_map <- function(stan_data){
 #' predefined age strata. For POLYMOD survey, age is mapped to itself.
 #'
 #' @param stan_data A list object containing data for the Stan model.
-#' @param survey A character string specifying the survey name.
+#' @param dt_contacts A data table containing contacts information.
+#' @param single_wave A logical value indicating whether the contact count data is from a
+#'                    single wave survey (default: \code{TRUE}).
+#'
 #' @return The modified stan_data object with the age-to-strata map added.
 #' @examples
 #' data(stan_data)
 #' stan_data <- add_age_strata_map(stan_data, survey = "COVIMOD")
 #' stan_data <- add_age_strata_map(stan_data, survey = "POLYMOD")
-add_age_strata_map <- function(stan_data, survey = "COVIMOD"){
-  if (survey == "COVIMOD"){
+add_age_strata_map <- function(stan_data,
+                               dt_contacts,
+                               single_contact_age = FALSE){
+
+  if (!single_contact_age) {
+
     # define age strata for COVIMOD survey
-    age_strata <- c("0-4","5-9","10-14","15-19","20-24","25-34","35-44",
-                    "45-54","55-64","65-69","70-74","75-79","80-84")
+    age_strata <- sort(unique(dt_contacts$alter_age_strata))
+    if (length(age_strata) != stan_data$C) { # Handle edge cases
+      stop("The number of age stratum does not match the number of age stratum detected in the data!")
+    }
 
     # extract minimum age for each strata
     alter_age_min <- as.numeric(str_extract(as.character(age_strata), "^[0-9]{1,2}"))
@@ -439,9 +479,8 @@ add_age_strata_map <- function(stan_data, survey = "COVIMOD"){
     # add map to Stan_data
     stan_data$map_age_to_strata <- map_age_to_strata
     return(stan_data)
-  }
 
-  if (survey == "POLYMOD"){
+  } else {
     # create identity matrix to map age to age strata for POLYMOD survey
     map_age_to_strata <- diag(rep(1, stan_data$A))
 

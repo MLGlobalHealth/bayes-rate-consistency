@@ -309,36 +309,3 @@ make_posterior_predictive_check <- function(dt, outdir=NA){
 
   return(dt)
 }
-
-#' Make MSE summary stats table
-#'
-#' @param dt Output of `extract_posterior_predictions()`
-#'
-#' @return data.frame with squared bias and MSE values
-#' @export
-#'
-#' @examples
-#' \dontrun{
-#' dt.po <- extract_posterior_predictions(fit)
-#'
-#' make_mse_table(dt.po)
-#' }
-make_error_table <- function(dt, outdir=NA){
-  mse <- function(y, y_pred) mean( (y - y_pred)**2, na.rm=T )
-  sbias <- function(y, y_pred) mean( y - y_pred, na.rm=T )^2
-
-  df <- data.frame(
-    metric = c("bias", "bias", "mse", "mse"),
-    name = c("intensity", "rate", "intensity", "rate"),
-    value = c(sbias(dt$cntct_intensity ,dt$cntct_intensity_predict),
-              sbias(dt$cntct_rate, dt$cntct_rate_predict),
-              mse(dt$cntct_intensity ,dt$cntct_intensity_predict),
-              mse(dt$cntct_rate, dt$cntct_rate_predict))
-  )
-
-  if(!is.na(outdir)){
-    saveRDS(df, file = file.path(outdir, "mse.rds"))
-  } else {
-    return(df)
-  }
-}

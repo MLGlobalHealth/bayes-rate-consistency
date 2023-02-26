@@ -17,4 +17,5 @@ Depends:
   loo (>= 2.5),
   viridis,
   ggsci,
-  patchwork
+  patchwork,
+  pammtools
