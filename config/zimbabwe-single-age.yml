@@ -1,0 +1,20 @@
+seed: 1234
+
+data:
+  path: "Zimbabwe/Zimbabwe_single_age.rds"
+  waves: 1
+  num_participant_age_groups: 85
+  num_contact_age_groups: 85
+  single_contact_age: TRUE
+
+model:
+  name: "hsgp-m52-rd"
+  hsgp_binf: 1.5
+  hsgp_m1: 30
+  hsgp_m2: 20
+  chains: 2
+  warmup: 500
+  sampling: 1000
+  max_treedepth: 10
+  adapt_delta: 0.90
+  refresh: 50

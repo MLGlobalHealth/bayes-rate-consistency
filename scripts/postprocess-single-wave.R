@@ -27,9 +27,12 @@ config <- read_yaml(file.path(getwd(),
                               "config",
                               cli_args$config_file))
 
+model_name <- paste(config$model$name,
+                    str_remove(cli_args$config_file, ".yml"),
+                    sep = "-")
 model_path <- file.path(cli_args$repo_path,
                         "stan_fits",
-                        paste0(config$model$name, ".rds"))
+                        paste0(model_name ".rds"))
 
 data_path <- file.path(cli_args$repo_path,
                        "data",
