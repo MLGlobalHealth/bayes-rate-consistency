@@ -66,7 +66,7 @@ dt_offsets <- data$offsets
 dt_population <- data$population
 
 # Load helpers
-source(file.path(cli_args$repo_path, "R/convergence_diagnositic_stats.R"))
+source(file.path(cli_args$repo_path, "R/convergence_diagnostic_stats.R"))
 source(file.path(cli_args$repo_path, "R/posterior_predictive_check.R"))
 source(file.path(cli_args$repo_path, "R/posterior_log_contact_rates.R"))
 source(file.path(cli_args$repo_path, "R/posterior_contact_intensity.R"))

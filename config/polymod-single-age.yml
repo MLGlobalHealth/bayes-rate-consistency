@@ -1,7 +1,7 @@
 seed: 1234
 
 data:
-  path: "Zimbabwe/Zimbabwe_single_age.rds"
+  path: "POLYMOD/polymod_single_age.rds"
   waves: 1
   num_participant_age_groups: 85
   num_contact_age_groups: 85
