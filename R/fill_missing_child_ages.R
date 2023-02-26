@@ -33,7 +33,7 @@ fill_missing_child_ages <- function(dt_participants, seed = 1527) {
   )]
 
   # Impute missing age using uniform distribution within age strata range
-  unique_dt[is.na(age), imp_age := runif.int(min_age, max_age)]
+  unique_dt[is.na(age), imp_age := runif.int(min_age, max_age), by = .(wave, new_id)]
   unique_dt[!is.na(age), imp_age := age]
 
   # Merge imputed age data back into original data table

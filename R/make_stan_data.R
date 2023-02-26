@@ -338,25 +338,25 @@ add_participant_offsets <- function(stan_data,
                              single_wave = TRUE){
 
   if (single_wave) {
-    # get the log of N and zeta values for males and females
-    d_M <- complete(dt_offsets[gender == "Male"], age = 0:84, fill = list(N = 1, zeta = 1))
-    d_F <- complete(dt_offsets[gender == "Female"], age = 0:84, fill = list(N = 1, zeta = 1))
+    # get the log of N and S values for males and females
+    d_M <- complete(dt_offsets[gender == "Male"], age = 0:84, fill = list(N = 1, S = 1))
+    d_F <- complete(dt_offsets[gender == "Female"], age = 0:84, fill = list(N = 1, S = 1))
 
     stan_data$log_N_M <- log(d_M$N)
     stan_data$log_N_F <- log(d_F$N)
 
-    stan_data$log_S_M <- log(d_M$zeta)
-    stan_data$log_S_F <- log(d_F$zeta)
+    stan_data$log_S_M <- log(d_M$S)
+    stan_data$log_S_F <- log(d_F$S)
   } else {
-    # get the number of participants and zeta values for males and females
+    # get the number of participants and S values for males and females
     d_M <- dt_contacts[gender == "Male" & alter_gender == "Male"]
     d_F <- dt_contacts[gender == "Female" & alter_gender == "Female"]
 
     stan_data$part_M <- d_M$N
     stan_data$part_F <- d_F$N
 
-    stan_data$S_M <- d_M$zeta
-    stan_data$S_F <- d_F$zeta
+    stan_data$S_M <- d_M$S
+    stan_data$S_F <- d_F$S
   }
 
   return(stan_data)
