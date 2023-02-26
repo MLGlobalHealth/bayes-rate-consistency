@@ -42,7 +42,7 @@ if (!file.exists(data_path)) {
 }
 
 # Output directories
-export_path <- file.path(cli_args$out_path, "results", config$model$name)
+export_path <- file.path(cli_args$out_path, "results", model_name)
 export_fig_path <- file.path(export_path, "figures")
 if (!dir.exists(export_path)) {
   dir.create(export_path, recursive = TRUE)
