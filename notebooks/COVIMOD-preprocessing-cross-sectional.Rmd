@@ -1,0 +1,180 @@
+---
+title: "Preprocessing (single waves)"
+author: "Shozen Dan"
+date: "2022-07-31"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message=FALSE}
+library(data.table)
+library(stringr)
+library(ggplot2)
+library(pammtools)
+```
+
+```{r}
+WAVE <- 5
+```
+
+## Setup
+```{r}
+source("../R/load_covimod_data.R")
+covimod <- load_covimod_data("~/bayes-rate-consistency")
+dt_part <- covimod$part
+dt_nhh <- covimod$nhh
+dt_hh <- covimod$hh
+
+dt_part <- dt_part[wave == WAVE]
+dt_nhh <- dt_nhh[wave == WAVE]
+dt_hh <- dt_hh[wave == WAVE]
+```
+
+## Participant data
+
+We begin by cleaning the data to remove any participant with missing age-strata or gender information. Next, we impute the age of children by sampling from a uniform distribution using the `fill_missing_child_ages()` function with a specified seed of 1527. This step is necessary because the age of children may not have been accurately recorded in the original data set, and we need to have complete age information for our analysis. Finally, we perform a sanity check by counting the number of observations in each wave of the data using the data.table syntax `dt_part[, .(N = .N)]`. This allows us to ensure that there are no obvious errors or inconsistencies in the data set.
+```{r}
+source("../R/fill_missing_child_ages.R")
+
+# Impute children age by sampling from uniform distribution
+dt_part <- fill_missing_child_ages(dt_part, seed = 1527)
+
+# Remove participants with missing age-strata or gender information
+dt_part <- dt_part[!(is.na(gender) | is.na(age_strata) | is.na(imp_age))]
+
+# Sanity check
+dt_part[, .(N = .N)]
+```
+
+## Non-household contacts
+### Contacts with missing age and gender information
+
+This R code begins by identifying contacts with missing age and gender information from the `dt_nhh` data set, storing the resulting data in a new variable called `dt_incomplete`. Next, participant information is appended to the `dt_incomplete` data set by merging it with the `dt_part` data set on the new_id and wave variables using the `merge()` function. For each participant, we count the number of contacts with missing age or gender information using the `.N` syntax, which is stored in a new variable `y_incomplete`. Finally, the ambiguous contacts with missing age and gender information are removed from the original `dt_nhh` data set using the logical condition.
+```{r}
+# Identify contacts with missing age and gender
+dt_incomplete <- dt_nhh[(is.na(alter_age_strata) | is.na(alter_gender))]
+
+# Append participant info
+dt_incomplete <- merge(dt_incomplete[,.(new_id, wave)], 
+                       dt_part, 
+                       by = c("new_id", "wave"), 
+                       all.x = TRUE)
+
+# Count the number of contacts with missing age or gender information.
+dt_incomplete <- dt_incomplete[, .(y_incomplete = .N), by = c("imp_age", "gender")]
+setnames(dt_incomplete, "imp_age", "age")
+
+# Remove ambiguous contacts from original nhh data
+dt_nhh <- dt_nhh[!(is.na(alter_age_strata) | is.na(alter_gender))]
+```
+
+### Group contacts
+
+In this R code, we calculate the number of contacts for each participant by summing up the values of three questions ("work", "school", and "other") across three age strata ("under 18", "18-64", and "over 64") using the `rowSums()` function. The columns containing the relevant data are specified using the `SDcols_Q75` vector. We store the resulting vector of contact counts in a new variable called `y_group`. We then cap the maximum value of `y_group` at 60. Next, we aggregate the contact counts by imputed age and gender using the `groupby` syntax of `data.table` and store the resulting data in a new variable called `dt_group`. We also rename the `imp_age` variable to `age` for clarity.
+```{r}
+SDcols_Q75 <- c("Q75_u18_work", "Q75_u18_school", "Q75_u18_else", 
+                "Q75_1864_work", "Q75_1864_school", "Q75_1864_else",
+                "Q75_o64_work", "Q75_o64_school", "Q75_o64_else")
+
+dt_part[, y_group := rowSums(.SD, na.rm = T), .SDcols = SDcols_Q75]
+dt_part[y_group > 60, y_group := 60]
+
+dt_group <- dt_part[, .(y = sum(y_group)), by = .(imp_age, gender)]
+setnames(dt_group, "imp_age", "age")
+```
+
+## Combine household and non-household data
+
+We rename the `hh_met_this_day` variable in `dt_hh` to `y` for consistency with the other data sets. We also add a new variable type to each data set indicating whether a contact is from a household (`hh`) or not (`nhh`). We then combine the `dt_nhh` and `dt_hh` data sets into a single data set called `dt_combined`. The resulting data set includes variables for `new_id`, `type` (household or non-household), `alter_age_strata`, `alter_gender`, and `y` (the number of contacts). The type variable is converted to a factor variable with levels `hh` and `nhh` using the `factor()` function. We then merge `dt_combined` with the `dt_part` data set on new_id using the `merge()` function to add participant information to the combined data set. Finally, we perform a sanity check to confirm that the sum of contacts in the combined data set, incomplete data set, and grouped data set matches the expected total number of contacts.
+```{r}
+setnames(dt_hh, "hh_met_this_day", "y")
+dt_hh[, type := "hh"]
+dt_nhh[, `:=`(y = 1, type = "nhh")]
+
+# Combine household and non-household contacts
+dt_combined <- rbind(dt_nhh[,.(new_id, type, alter_age_strata, alter_gender, y)], 
+                     dt_hh[,.(new_id, type, alter_age_strata, alter_gender, y)])
+
+dt_combined$type <- factor(dt_combined$type, levels = c("hh", "nhh"))
+
+# Merge with participant data
+dt_combined <- merge(dt_combined, 
+                     dt_part, 
+                     by = c("new_id"), 
+                     all.x = TRUE)
+
+# Sanity check
+sum(dt_combined$y, na.rm = T) + sum(dt_incomplete$y_incomplete) + sum(dt_group$y)
+```
+
+## Aggregate contacts
+```{r}
+# Participant size by wave and repetition
+dt_part_size <- dt_part[, .(N = .N), by = .(imp_age, gender)]
+setnames(dt_part_size, "imp_age", "age")
+
+# Aggregate age-gender-specific contacts
+dt_combined <- dt_combined[, .(y = sum(y, na.rm = T)), 
+                           by = .(imp_age, gender, alter_age_strata, alter_gender)]
+dt_combined_sum <- dt_combined[, .(y = sum(y, na.rm = T)), by = .(imp_age, gender)]
+setnames(dt_combined_sum, "imp_age", "age")
+setnames(dt_combined, "imp_age", "age")
+
+setnames(dt_incomplete, "y_incomplete", "y")
+
+# Total number of contacts (specific + ambiguous + group)
+dt_total <- rbind(dt_combined_sum, dt_incomplete, dt_group)
+dt_total <- dt_total[,.(y = sum(y, na.rm = T)), by = .(age, gender)]
+setnames(dt_total, "y", "y_total")
+
+# Calculate S term
+dt_offsets <- merge(dt_combined_sum, dt_total, 
+                                  by = c("age", "gender"), 
+                                  all.x = TRUE)
+dt_offsets[, S := y / y_total]
+dt_offsets[, S := ifelse(is.nan(S), 1, S)]
+
+# Offset terms
+dt_offsets <- merge(dt_part_size, 
+                    dt_offsets[,.(age, gender, S)], 
+                    by = c("age", "gender"), 
+                    all.x = T)
+dt_offsets[is.na(S), S := 1]
+```
+
+```{r}
+# Remove participants and contacts 85+
+dt_combined <- dt_combined[!(age > 84 | alter_age_strata == "85+")]
+dt_offsets <- dt_offsets[!(age > 84)]
+
+source("../R/age_gender_grid.R")
+dt_grid <- age_gender_grid(85, gender = TRUE)
+dt_contacts <- merge(dt_grid, 
+                     dt_combined, 
+                     by = c("age", "gender", "alter_age_strata", "alter_gender"), 
+                     all.x = TRUE)
+dt_contacts <- merge(dt_contacts, 
+                     dt_offsets, 
+                     by = c("age", "gender"), 
+                     all.x = TRUE)
+
+# Impute true zeroes
+dt_contacts <- dt_contacts[!is.na(N)]
+dt_contacts <- dt_contacts[is.na(y), S := 1]
+dt_contacts <- dt_contacts[is.na(y), y := 0]
+```
+
+## Export data
+```{r}
+data <- list(contacts = dt_contacts,
+             offsets = dt_offsets,
+             population = covimod$pop)
+
+saveRDS(data, 
+        file = file.path("../data/COVIMOD",
+                         paste0(paste("COVIMOD", "wave", WAVE, sep = "_"), ".rds")))
+```
+
