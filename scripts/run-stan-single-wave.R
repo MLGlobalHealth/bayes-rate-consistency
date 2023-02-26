@@ -81,8 +81,6 @@ cat(" Saving fitted model ...\n")
 model_name <- paste(config$model$name,
                     str_remove(cli_args$config_file, ".yml"),
                     sep = "-")
-fit$save_object(file = file.path(export_path,
-                                 "stan_fits",
-                                 paste0(model_name, ".rds")))
+fit$save_object(file = file.path(export_path, paste0(model_name, ".rds")))
 
 cat("\n Run Stan ALL DONE.\n")
