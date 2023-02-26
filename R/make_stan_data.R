@@ -19,7 +19,7 @@ make_stan_data <- function(A,
 
       stan_data <- add_contact_vector(stan_data, dt_contacts)
       stan_data <- add_row_major_idx(stan_data, dt_contacts)
-      stan_data <- add_age_strata_map(stan_data)
+      stan_data <- add_age_strata_map(stan_data, dt_contacts)
     } else {
 
       stan_data <- add_contact_vector(stan_data,
@@ -179,7 +179,7 @@ add_N <- function(stan_data, single_wave = TRUE){
     stan_data$N_FF <- length(stan_data$Y_FF)
     stan_data$N_MF <- length(stan_data$Y_MF)
     stan_data$N_FM <- length(stan_data$Y_FM)
-    
+
   } else {
 
     stan_data$N_M <- length(stan_data$Y_MM)
