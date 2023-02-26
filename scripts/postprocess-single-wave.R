@@ -30,13 +30,10 @@ config <- read_yaml(file.path(getwd(),
 model_name <- paste(config$model$name,
                     str_remove(cli_args$config_file, ".yml"),
                     sep = "-")
-model_path <- file.path(cli_args$repo_path,
-                        "stan_fits",
-                        paste0(model_name ".rds"))
 
-data_path <- file.path(cli_args$repo_path,
-                       "data",
-                       config$data$path)
+model_path <- file.path(getwd(), "stan_fits", paste0(model_name, ".rds"))
+
+data_path <- file.path(getwd(), "data", config$data$path)
 
 # Error handling
 if (!file.exists(model_path)) {
