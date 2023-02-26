@@ -1,7 +1,7 @@
 #!/bin/bash
 REPO_PATH=/rds/general/user/sd121/home/bayes-rate-consistency
 OUT_PATH=/rds/general/user/sd121/home/bayes-rate-consistency-output
-CONFIG_FILE=simulation-inCOV250DiA.yml
+CONFIG_FILE=simulation-preCOV2000AA.yml
 
 # Create main script
 cat > "$OUT_PATH/simulation-fullproc.pbs" <<EOF

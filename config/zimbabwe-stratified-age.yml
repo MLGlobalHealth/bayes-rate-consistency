@@ -4,8 +4,8 @@ data:
   path: "Zimbabwe/Zimbabwe_stratified_age.rds"
   waves: 1
   num_participant_age_groups: 85
-  num_contact_age_groups: 85
-  single_contact_age: TRUE
+  num_contact_age_groups: 13
+  single_contact_age: FALSE
 
 model:
   name: "hsgp-m52-rd"

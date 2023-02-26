@@ -1,7 +1,7 @@
 #!/bin/bash
 REPO_PATH=/rds/general/user/sd121/home/bayes-rate-consistency
 OUT_PATH=/rds/general/user/sd121/home/bayes-rate-consistency-output
-CONFIG_FILE=polymod.yml
+CONFIG_FILE=zimbabwe-single-age.yml
 
 # Create main script
 cat > "$OUT_PATH/cross-sectional-postproc.pbs" <<EOF

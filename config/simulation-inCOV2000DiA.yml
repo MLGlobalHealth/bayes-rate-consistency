@@ -6,7 +6,7 @@ data:
   strata: "COVIMOD"
 
 model:
-  name: "hsgp-m52-rd"
+  name: "2dgp-m52-rd"
   hsgp_binf: 1.5
   hsgp_m1: 30
   hsgp_m2: 20
