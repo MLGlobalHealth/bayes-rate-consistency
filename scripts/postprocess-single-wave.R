@@ -110,6 +110,7 @@ cat(" Making posterior predictive checks ...\n")
 
 dt_ppc <- posterior_predictive_check(posterior_draws,
                                      dt_contacts,
+                                     single_contact_age = config$data$single_contact_age,
                                      outdir = export_path)
 
 cat(" Extracting posterior contact intensities ...\n")
