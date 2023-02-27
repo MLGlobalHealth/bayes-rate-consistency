@@ -83,7 +83,7 @@ cat("\n Making trace plots")
 pars <- c('nu', 'gp_alpha', 'gp_rho_1', 'gp_rho_2')
 pars_po <- fit$draws(pars)
 p <- bayesplot::mcmc_trace(pars_po,
-                           facet_args = list(nrow = 10, col = 1))
+                           facet_args = list(nrow = 10, ncol = 1))
 ggsave(file = file.path(export_fig_path, 'mcmc_trace_parameters.png'),
        plot = p,
        h = 20,
