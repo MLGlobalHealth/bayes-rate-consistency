@@ -1,11 +1,10 @@
-posterior_predictive_check <- function(fit,
+posterior_predictive_check <- function(posterior_draws,
                                        dt_contacts,
                                        single_contact_age = FALSE,
                                        outdir = NA){
   ps <- c(0.5, 0.025, 0.975)
   p_labs <- c('M','CL','CU')
 
-  posterior_draws <- fit$draws("yhat_strata", format = "draws_matrix")
   dt_posterior <- as.data.table(reshape2::melt(posterior_draws))
 
   # Extract indicies
