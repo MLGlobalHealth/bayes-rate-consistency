@@ -102,9 +102,9 @@ cat("\n Making trace plots")
 #
 # ##### ---------- Posterior predictive checks ---------- #####
 # cat(" Extracting posterior ...\n")
-# posterior_draws <- fit$draws(c("yhat_strata", "log_cnt_rate"),
-#                              inc_warmup = FALSE,
-#                              format = "draws_matrix")
+posterior_draws <- fit$draws(c("yhat_strata", "log_cnt_rate"),
+                             inc_warmup = FALSE,
+                             format = "draws_matrix")
 #
 # cat(" Making posterior predictive checks ...\n")
 #
