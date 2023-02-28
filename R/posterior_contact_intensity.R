@@ -84,8 +84,8 @@ posterior_contact_intensity <- function(dt_posterior,
     dt_female <- dt_posterior[gender_pair_idx %in% c(2, 4)]
 
     # Recover age
-    dt_male[, age := age_idx - 1]
-    dt_female[, age := age_idx - 1]
+    dt_male[, `:=`(age = age_idx - 1, alter_age = alter_age_idx - 1)]
+    dt_female[, `:=`(age = age_idx - 1, alter_age = alter_age_idx - 1)]
 
     # Append population counts
     dt_male <- merge(dt_male,
