@@ -17,7 +17,9 @@ posterior_predictive_check <- function(posterior_draws,
   # Calculate quantiles
   dt_posterior <- dt_posterior[, .(q = quantile(value, prob=ps, na.rm=T), q_label = p_labs),
                                by = .(gender_pair_idx, age_idx, alter_age_idx)]
-  dt_posterior <- dcast(dt_posterior, gender_pair_idx + age_idx + alter_age_idx ~ q_label, value.var = "q")
+  dt_posterior <- data.table::dcast(dt_posterior,
+                                    gender_pair_idx + age_idx + alter_age_idx ~ q_label,
+                                    value.var = "q")
 
   # Recover age
   dt_posterior[, age := age_idx - 1]
