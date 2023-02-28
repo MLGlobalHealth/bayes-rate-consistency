@@ -35,7 +35,7 @@ posterior_predictive_check <- function(posterior_draws,
     gender_pair_idx %in% c(2,3), "Female",
     default = NA)]
 
-  if (!single_contact_age) {
+  if (single_contact_age) {
     dt_posterior[, alter_age := alter_age_idx - 1]
     dt_ppc <- merge(dt_contacts, dt_posterior[, .(age, alter_age, gender, alter_gender, CL, CU)],
                     by = c("age", "alter_age", "gender", "alter_gender"))
