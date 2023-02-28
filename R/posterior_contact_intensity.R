@@ -88,8 +88,14 @@ posterior_contact_intensity <- function(dt_posterior,
     dt_female[, age := age_idx - 1]
 
     # Append population counts
-    dt_male <- merge(dt_male, dt_population[gender == "Male"], by = "age")
-    dt_female <- merge(dt_female, dt_population[gender == "Female"], by = "age")
+    dt_male <- merge(dt_male,
+                     dt_population[gender == "Male"],
+                     by.x = "alter_age",
+                     by.y = "age")
+    dt_female <- merge(dt_female,
+                       dt_population[gender == "Female"],
+                       by.x = "alter_age",
+                       by.y = "age")
 
     # Summarize quantities
     dt_male <- summarize_and_quantile(dt_male)
@@ -101,7 +107,7 @@ posterior_contact_intensity <- function(dt_posterior,
 
     # Combine Male and Female data and relabel columns
     dt <- rbind(dt_male, dt_female)
-    dt <- dcast(dt, age + gender ~ q_label, value.var = "q")
+    dt <- data.table::dcast(dt, age + gender ~ q_label, value.var = "q")
     setnames(dt, c("M", "CL", "CU"), c("intensity_M", "intensity_CL", "intensity_CU"))
 
     if(!is.na(outdir)){
