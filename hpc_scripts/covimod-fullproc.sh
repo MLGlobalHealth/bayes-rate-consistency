@@ -1,24 +1,33 @@
-#!/bin/sh
+#!/bin/bash
+REPO_PATH="/rds/general/user/sd121/home/bayes-rate-consistency"
+OUT_PATH="/rds/general/user/sd121/home/bayes-rate-consistency-output"
+CONFIG_FILE="covimod-longitudinal.yml"
 
-#PBS -l walltime=48:00:00
-#PBS -l select=1:ncpus=10:ompthreads=1:mem=512gb
-
-REPO_PATH=/rds/general/user/sd121/home/covimod-gp
-WAVES=5
-MODEL="hsgp-m52-lrd"
-HSGP_C=1.5
-HSGP_M1=40
-HSGP_M2=30
-
-# HMC Sampler params
-CHAINS=8
-WARMUP=500
-SAMPLING=1000
+# Create main script
+cat > "$OUT_PATH/covimod-fullproc.pbs" <<EOF
+#!/bin/bash
+#PBS -l walltime=08:00:00
+#PBS -l select=1:ncpus=8:ompthreads=1:mem=100gb
 
 module load anaconda3/personal
-source activate Renv
+source activate bayes-rate-consistency
 
-Rscript $REPO_PATH/scripts/run-stan.R --waves $WAVES --model $MODEL --hsgp_c $HSGP_C --hsgp_m1 $HSGP_M1 --hsgp_m2 $HSGP_M2 --chains $CHAINS --iter_warmup $WARMUP --iter_sampling $SAMPLING
+# Move into repository
+cd $REPO_PATH
 
-MODEL=${MODEL}-${WAVES}
-Rscript $REPO_PATH/scripts/postprocess.R --model $MODEL
+# Run Stan models
+Rscript scripts/run-stan.R \
+  -i "$REPO_PATH" \
+  -o "$OUT_PATH" \
+  --config "$CONFIG_FILE"
+
+# Postprocessing
+Rscript scripts/postprocess.R \
+  -i "$REPO_PATH" \
+  -o "$OUT_PATH" \
+  --config "$CONFIG_FILE"
+EOF
+
+# Execute main script
+cd $OUT_PATH
+qsub "covimod-fullproc.pbs"
