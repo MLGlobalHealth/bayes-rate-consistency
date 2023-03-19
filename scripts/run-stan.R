@@ -12,10 +12,13 @@ cat(" Configuring IO...\n")
 
 option_list <- list(
   make_option(c("-i", "--in"), type = "character", default = NA, help = "repository path", dest = "repo_path"),
-  make_option(c("-o", "--out"), type = "character", default = NA, help = "output path", dest = "out_path")
+  make_option(c("-o", "--out"), type = "character", default = NA, help = "output path", dest = "out_path"),
+  make_option(c("--config"), type = "character", default = NA, help = "configuration file", dest = "config_file")
 )
 cli_params <- optparse::parse_args(optparse::OptionParser(option_list = option_list))
-config <- yaml::read_yaml(file.path(cli_params$repo_path, "config/covimod-longitudinal.yml"))
+config <- yaml::read_yaml(file.path(getwd(),
+                                    "config",
+                                    cli_params$config_file))
 
 # Path to model
 model_path <- file.path(cli_params$repo_path,
