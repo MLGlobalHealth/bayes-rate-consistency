@@ -15,7 +15,7 @@ option_list <- list(
   make_option(c("-o", "--out"), type = "character", default = NA, help = "output path", dest = "out_path")
 )
 cli_params <- optparse::parse_args(optparse::OptionParser(option_list = option_list))
-config <- yaml::read_yaml(file.path(cli_params$repo_path, "settings/covimod-longitudinal.yml"))
+config <- yaml::read_yaml(file.path(cli_params$repo_path, "config/covimod-longitudinal.yml"))
 
 # Path to model
 model_path <- file.path(cli_params$repo_path,
@@ -32,31 +32,33 @@ if (!file.exists(export_path)) {
 cat(" Loading data...\n")
 # Load helpers
 source(file.path(cli_params$repo_path, "R/make_stan_data.R"))
-source(file.path(cli_params$repo_path, "R/covimod-utility.R"))
+# source(file.path(cli_params$repo_path, "R/covimod-utility.R"))
 
 # Load data
-covimod <- readRDS(file.path(cli_params$repo_path, "data/COVIMOD/COVIMOD-multi.rds"))
+covimod <- readRDS(file.path(cli_params$repo_path,
+                             "data",
+                             config$data$path))
 
-dt_contacts <- covimod$contacts[wave <= config$data$waves]
-dt_offsets <- covimod$offsets[wave <= config$data$waves]
+dt_contacts <- covimod$contacts
+dt_offsets <- covimod$offsets
 dt_population <- covimod$pop
 
 ## Configure Stan data
 cat(" Configuring Stan data ...\n")
 
 model_params <- config$model
-stan_data <- make_stan_data(A = 85,
-                            C = 13,
-                            W = config$data$waves,
-                            dt_contacts = dt_contacts,
-                            dt_offsets = dt_offsets,
-                            dt_population = dt_population,
-                            survey = "COVIMOD",
-                            model_params = model_params)
+stan_data <- make_stan_data(85,
+                            13,
+                            dt_contacts,
+                            dt_offsets,
+                            dt_population,
+                            model_params,
+                            single_wave = FALSE,
+                            waves = config$data$waves)
 
 # initial values
-source(file.path(cli_params$repo_path, "R/stratify_contact_age.R"))
-dt_population <- age_stratify(dt_population)
+source(file.path(cli_params$repo_path, "R/stratify_age.R"))
+dt_population <- stratify_age(dt_population)
 dt_population <- dt_population[, .(pop = sum(pop)), by = c("gender", "age_strata")]
 dt_baseline <- merge(dt_contacts, dt_population,
                      by.x = c("alter_gender", "alter_age_strata"),
@@ -85,7 +87,9 @@ fit <- model$sample(
 
 cat(" Saving the fitted model ...\n")
 
-model_name <- paste(model_params$name, config$data$waves, sep = "-")
+data_name <- str_split(config$data$path, "/")[[1]][-1]
+data_name <- str_remove(data_name, ".rds")
+model_name <- paste(model_params$name, data_name, sep = "_")
 fit$save_object(file = file.path(export_path, paste0(model_name, ".rds")))
 
 cat("\n Run Stan ALL DONE.\n")

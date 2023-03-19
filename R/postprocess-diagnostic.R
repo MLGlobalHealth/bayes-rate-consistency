@@ -37,16 +37,16 @@ make_ppd_check <- function(po, contacts, offsets, outdir=NA){
 
   po <- subset(po, "yhat_strata")
 
-  dt.po <- as.data.table(reshape2::melt(po))
+  dt_posterior <- as.data.table(reshape2::melt(po))
 
   # Extract indicies
   .pattern <- "yhat_strata\\[([0-9]+)\\]"
 
-  dt.po[, idx := as.numeric(gsub(.pattern, "\\1", variable))]
+  dt_posterior[, idx := as.numeric(gsub(.pattern, "\\1", variable))]
 
   # Calculate quantiles
-  dt.po <- dt.po[, list( q=quantile(value, prob=ps, na.rm=T), q_label = p_labs), by=list(idx)]
-  dt.po <- data.table::dcast(dt.po, idx ~ q_label, value.var = "q")
+  dt_posterior <- dt_posterior[, list( q=quantile(value, prob=ps, na.rm=T), q_label = p_labs), by=list(idx)]
+  dt_posterior <- data.table::dcast(dt_posterior, idx ~ q_label, value.var = "q")
 
   dt <- contacts[order(u, age, alter_age_strata)]
   dt <- rbind(
@@ -56,7 +56,7 @@ make_ppd_check <- function(po, contacts, offsets, outdir=NA){
     dt[gender == "Female" & alter_gender == "Male"]
   )
 
-  dt <- cbind(dt, dt.po)
+  dt <- cbind(dt, dt_posterior)
 
   dt[, inside.CI := y >= CL & y <= CU]
   cat(" Proportion of points within posterior predictive 95% CI: ", mean(dt$inside.CI, na.rm=T), "\n")
@@ -75,47 +75,50 @@ make_ppd_check <- function(po, contacts, offsets, outdir=NA){
 #' @param po posterior draws matrix
 #'
 #' @return posterior draws data.table
-extract_posterior_intensity <- function(po, dt.pop){
-  po <- subset(po, "log_cnt_rate")
-  dt.po <- as.data.table(reshape2::melt(po))
+extract_posterior_intensity <- function(posterior_draws, dt_population){
+  posterior_draws <- subset(posterior_draws, "log_cnt_rate")
+  dt_posterior <- as.data.table(reshape2::melt(posterior_draws))
 
   # Extract indices
   .pattern <- "log_cnt_rate\\[([0-9]+),([0-9]+),([0-9]+),([0-9]+)\\]"
 
-  dt.po[, wave := as.numeric(gsub(.pattern, "\\1", variable))]
-  dt.po[, comb_idx := as.numeric(gsub(.pattern, "\\2", variable))]
-  dt.po[, age_idx := as.numeric(gsub(.pattern, "\\3", variable))]
-  dt.po[, alter_age_idx := as.numeric(gsub(.pattern, "\\4", variable))]
+  dt_posterior[, wave := as.numeric(gsub(.pattern, "\\1", variable))]
+  dt_posterior[, comb_idx := as.numeric(gsub(.pattern, "\\2", variable))]
+  dt_posterior[, age_idx := as.numeric(gsub(.pattern, "\\3", variable))]
+  dt_posterior[, alter_age_idx := as.numeric(gsub(.pattern, "\\4", variable))]
 
   # Recover age and gender
-  dt.po[, age := age_idx - 1]
-  dt.po[, alter_age := alter_age_idx - 1]
-  dt.po[, gender := fcase(comb_idx %in% c(1,3), "Male",
+  dt_posterior[, age := age_idx - 1]
+  dt_posterior[, alter_age := alter_age_idx - 1]
+  dt_posterior[, gender := fcase(comb_idx %in% c(1,3), "Male",
                           comb_idx %in% c(2,4), "Female", default = NA)]
-  dt.po[, alter_gender := fcase(comb_idx %in% c(1,4), "Male",
+  dt_posterior[, alter_gender := fcase(comb_idx %in% c(1,4), "Male",
                                 comb_idx %in% c(2,3), "Female", default = NA)]
 
   # Remove unnecessary columns
-  dt.po[, age_idx := NULL]
-  dt.po[, alter_age_idx := NULL]
-  dt.po[, comb_idx := NULL]
+  dt_posterior[, age_idx := NULL]
+  dt_posterior[, alter_age_idx := NULL]
+  dt_posterior[, comb_idx := NULL]
 
   # Merge with population data
-  dt.po <- merge(dt.po, dt.pop, by.x = c("alter_age", "alter_gender"), by.y = c("age", "gender"), all.x = TRUE)
+  dt_posterior <- merge(dt_posterior, dt_population,
+                        by.x = c("alter_age", "alter_gender"),
+                        by.y = c("age", "gender"),
+                        all.x = TRUE)
 
   # Calculate posterior contact intensities
-  dt.po[, value := exp(value + log(pop))]
+  dt_posterior[, value := exp(value + log(pop))]
 
-  return(dt.po)
+  return(dt_posterior)
 }
 
-summarise_posterior_intensity <- function(dt.po, dt.off = NULL, type="matrix", outdir=NA){
+summarise_posterior_intensity <- function(dt_posterior, dt.off = NULL, type="matrix", outdir=NA){
   ps <- c(0.5, 0.025, 0.975)
   p_labs <- c('M','CL','CU')
 
   if(type=="matrix"){ # Full contact intensity matrix
     # Calculate quantiles
-    dt <- dt.po[,  .(q=quantile(value, prob=ps, na.rm=T), q_label = p_labs),
+    dt <- dt_posterior[,  .(q=quantile(value, prob=ps, na.rm=T), q_label = p_labs),
                 by = .(wave, age, gender, alter_age, alter_gender)]
     dt <- data.table::dcast(dt, wave + age + gender + alter_age + alter_gender ~ q_label, value.var = "q")
     setnames(dt, c("M", "CL", "CU"), c("intensity_M", "intensity_CL", "intensity_CU"))
@@ -134,7 +137,7 @@ summarise_posterior_intensity <- function(dt.po, dt.off = NULL, type="matrix", o
     dt.off <- merge(g, dt.off[, .(wave, age, gender, N)], by=c("wave", "age", "gender"), all.x = T)
     dt.off[is.na(N), N := 1]
 
-    dt <- dt.po[, .(value = sum(value)), by = c("draw", "wave", "age", "gender", "alter_age")]
+    dt <- dt_posterior[, .(value = sum(value)), by = c("draw", "wave", "age", "gender", "alter_age")]
     dt <- merge(dt, dt.off, by = c("wave", "age", "gender"), all.x = TRUE, allow.cartesian = TRUE)
     dt <- dt[, .(value = sum(value * N) / sum(N)), by=c("draw", "wave", "age", "alter_age")]
 
@@ -170,7 +173,7 @@ summarise_posterior_intensity <- function(dt.po, dt.off = NULL, type="matrix", o
 
   } else if (type=="margin-a") { # Marginal contact intensity by gender
 
-    dt <- dt.po[, .(value = sum(value)), by=c("draw", "wave", "age", "gender")]
+    dt <- dt_posterior[, .(value = sum(value)), by=c("draw", "wave", "age", "gender")]
 
     # Intensities
     dt.int <- dt[, list( q=quantile(value, probs=ps, na.rm=T), q_label = p_labs), by=c("wave", "age", "gender")]
@@ -218,7 +221,7 @@ summarise_posterior_intensity <- function(dt.po, dt.off = NULL, type="matrix", o
     return(dt)
   } else if (type=="margin-b") { # Marginal contact intensity by gender pair
 
-    dt <- dt.po[, .(value = sum(value)), by=c("draw", "wave", "age", "gender", "alter_gender")]
+    dt <- dt_posterior[, .(value = sum(value)), by=c("draw", "wave", "age", "gender", "alter_gender")]
     dt <- dt[, list( q=quantile(value, prob=ps, na.rm=T), q_label = p_labs), by=c("wave", "age", "gender", "alter_gender")]
     dt <- data.table::dcast(dt, wave + age + gender + alter_gender ~ q_label, value.var = "q")
     setnames(dt, c("M", "CL", "CU"), c("intensity_M", "intensity_CL", "intensity_CU"))
@@ -237,7 +240,7 @@ summarise_posterior_intensity <- function(dt.po, dt.off = NULL, type="matrix", o
     dt.off <- merge(g, dt.off[, .(wave, age, gender, N)], by=c("wave", "age", "gender"), all.x = T)
     dt.off[is.na(N), N := 1]
 
-    dt <- dt.po[, .(value = sum(value)), by=c("draw", "wave", "gender", "age")]
+    dt <- dt_posterior[, .(value = sum(value)), by=c("draw", "wave", "gender", "age")]
     # Define participant age groups
     dt[, age_strata := fcase(age < 18, "0-17",
                              age < 30, "18-29",
@@ -279,33 +282,4 @@ summarise_posterior_intensity <- function(dt.po, dt.off = NULL, type="matrix", o
   } else {
     return(NA)
   }
-}
-
-#' Makes a table for posterior predictive checks
-#'
-#' @param dt Output of `extract_posterior_predictions()`
-#' @param predict_type Type of prediction to extract [yhat, yhat_strata]
-#' @param outdir
-#'
-#' @return A data.table with indications for whether the predicted estimates lie in the posterior predictive 95% CI
-#' @export
-#'
-#' @examples
-#' \dontrun{
-#' dt.po <- extract_posterior_predictions(fit, predict_type = "yhat")
-#'
-#' make_posterior_predictive_check(dt.po, predict_type="yhat")
-#' }
-make_posterior_predictive_check <- function(dt, outdir=NA){
-
-  dt[, inside.CI := cntct_intensity <= cntct_intensity_predict_CU & cntct_intensity >= cntct_intensity_predict_CL]
-  cat("\n Proportion of points within posterior predictive 95% CI: ", mean(dt$inside.CI, na.rm=T))
-
-  if(!is.na(outdir)){
-    saveRDS(dt, file.path(outdir, "ppd_check.rds"))
-  } else {
-    warning("\n outdir is not specified. Results were not saved.")
-  }
-
-  return(dt)
 }

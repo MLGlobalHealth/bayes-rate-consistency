@@ -34,13 +34,13 @@ make_stan_data <- function(A,
     stan_data <- add_N(stan_data, single_wave = TRUE)
 
   } else {
-
+    # Multiple waves
     stan_data <- init_stan_data(A, C, waves)
     stan_data <- add_contact_vector(stan_data,
                                     dt_contacts,
                                     single_wave = FALSE)
     stan_data <- add_N(stan_data, single_wave = FALSE)
-    stan_data <- add_row_major_idx(stan_data, dt_contacts)
+    stan_data <- add_row_major_idx(stan_data, dt_contacts, single_wave = FALSE)
     stan_data <- add_start_end_idx(stan_data, dt_contacts)
     stan_data <- add_participant_offsets(stan_data,
                                          dt_contacts,
@@ -49,7 +49,7 @@ make_stan_data <- function(A,
                                         dt_population,
                                         single_wave = FALSE)
     stan_data <- add_wave_repeat_u_map(stan_data)
-    stan_data <- add_age_strata_map(stan_data)
+    stan_data <- add_age_strata_map(stan_data, dt_contacts)
   }
 
   stan_data <- add_non_nuisance_idx(stan_data)
@@ -282,24 +282,27 @@ add_row_major_idx <- function(stan_data,
 #' stan_data <- add_start_end_idx(stan_data, contacts)
 add_start_end_idx <- function(stan_data, dt_contacts){
   # function to create start and end indices for a given gender
-  make_start_end_idx <- function(dt_contacts, gender) {
+  make_start_end_idx <- function(dt_contacts, .gender) {
+
+    sort_order <- c("u", "age", "alter_age_strata", "gender", "alter_gender")
+    dt <- dt_contacts[, .(y), keyby = sort_order]
     # subset the data.table
-    d <- dt_contacts[gender == gender & alter_gender == gender]
+    dt <- dt[gender == .gender & alter_gender == .gender]
 
     # create a data.table with all possible 'u' values
     g <- data.table(u = 1:max(dt_contacts$u))
 
     # add an index column to the subset and calculate the start and end indices
-    d[, idx := 1:.N]
-    d <- d[, .(start_idx = min(idx), end_idx = max(idx)), by = "u"]
+    dt[, idx := 1:.N]
+    dt <- dt[, .(start_idx = min(idx), end_idx = max(idx)), by = "u"]
 
     # merge with the data.table with all possible 'u' values and replace NAs with 0
-    d <- merge(g, d, by = "u", all.x = TRUE)
-    d[is.na(start_idx), start_idx := 0]
-    d[is.na(end_idx), end_idx := 0]
+    dt <- merge(g, dt, by = "u", all.x = TRUE)
+    dt[is.na(start_idx), start_idx := 0]
+    dt[is.na(end_idx), end_idx := 0]
 
     # extract and return start_idx and end_idx as a list
-    list(start_idx = d$start_idx, end_idx = d$end_idx)
+    list(start_idx = dt$start_idx, end_idx = dt$end_idx)
   }
 
   # create start and end indices for Male and Female separately

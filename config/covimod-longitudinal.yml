@@ -1,8 +1,14 @@
 seed: 1234
+
 data:
+  path: "COVIMOD/COVIMOD_multi_1234.rds"
   waves: 5
+  num_participant_age_groups: 85
+  num_contact_age_groups: 13
+  single_contact_age: FALSE
+
 model:
-  name: "hsgp-m52-rd"
+  name: "hsgp-m52-lrd"
   hsgp_binf: 1.5
   hsgp_m1: 30
   hsgp_m2: 20
@@ -12,3 +18,8 @@ model:
   max_treedepth: 13
   adapt_delta: 0.90
   refresh: 50
+
+postprocess:
+  mixing: TRUE
+  ppc: TRUE
+  plot: TRUE

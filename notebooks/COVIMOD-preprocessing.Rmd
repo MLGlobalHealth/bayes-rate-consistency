@@ -21,6 +21,9 @@ library(pammtools)
 # Load helpers
 source("../R/load_covimod_data.R")
 source("../R/fill_missing_child_ages.R")
+source("../R/age_gender_grid.R")
+
+SEED <- 0721
 ```
 
 ## Load data
@@ -59,7 +62,7 @@ dt_participants[, rep := rep - 1]
 dt_participants[, rep := ifelse(rep > 4, 4, rep)]
 
 # Impute children age by sampling from uniform distribution
-dt_participants <- fill_missing_child_ages(dt_participants, seed=1527)
+dt_participants <- fill_missing_child_ages(dt_participants, seed = SEED)
 
 # Create a new index U which is a combined index of wave and rep
 dt_participants[, u := fcase(wave == 1, 1, 
@@ -153,15 +156,15 @@ dt.tot <- rbind(dt.cmb.agg.margin, dt.amb.agg, dt.grp)
 dt.tot <- dt.tot[,.(y = sum(y, na.rm=T)), by=.(wave, age, gender)]
 setnames(dt.tot, "y", "y_tot")
 
-# Calculate zeta term
+# Calculate S term
 dt.amb.agg.margin <- merge(dt.cmb.agg.margin, dt.tot, by=c("wave", "age","gender"), all.x=TRUE)
-dt.amb.agg.margin[, zeta := y/y_tot]
-dt.amb.agg.margin[, zeta := ifelse(is.nan(zeta), 1, zeta)]
+dt.amb.agg.margin[, S := y/y_tot]
+dt.amb.agg.margin[, S := ifelse(is.nan(S), 1, S)]
 
 # Offset terms
-dt.offsets <- merge(dt_participants.size, dt.amb.agg.margin[,.(wave, age, gender, zeta)], 
+dt.offsets <- merge(dt_participants.size, dt.amb.agg.margin[,.(wave, age, gender, S)], 
                     by=c("wave","age","gender"), all.x = T)
-dt.offsets[is.na(zeta), zeta := 1]
+dt.offsets[is.na(S), S := 1]
 
 dt.tot[, .(y = sum(y_tot)), by=.(wave)]
 ```
@@ -176,9 +179,13 @@ dt.cmb.agg <- dt.cmb.agg[!is.na(alter_gender)]
 ```
 
 ```{r}
-g <- make_grid(85, 15, gender = TRUE)
-d <- merge(g, dt.cmb.agg, by=c("u", "age", "gender", "alter_age_strata", "alter_gender"), all.x = TRUE)
-d <- merge(d, dt.offsets[, .(u, age, gender, N, zeta)], by = c("u", "age", "gender"), all.x = TRUE)
+g <- age_gender_grid(85, 15, gender = TRUE)
+d <- merge(g, dt.cmb.agg, 
+           by = c("u", "age", "gender", "alter_age_strata", "alter_gender"), 
+           all.x = TRUE)
+d <- merge(d, dt.offsets[, .(u, age, gender, N, S)], 
+           by = c("u", "age", "gender"), 
+           all.x = TRUE)
 
 # Impute true zeroes
 d <- d[!is.na(N)]
@@ -201,21 +208,27 @@ d[, rep := fcase(wave == 1, 0,
 tmp <- d[, m := y/N]
 ggplot(tmp[u == 1], aes(age, alter_age_strata)) + 
   geom_tile(aes(fill = m)) + 
+
   facet_grid(gender ~ alter_gender) + 
   viridis::scale_fill_viridis(option='H') +
   theme_bw() + 
   theme(aspect.ratio = 1)
 ```
+
 ## Export data
 ```{r}
-covimod.processed <- list(
+covimod_processed <- list(
   u.missing = u.missing,
   contacts = d,
   offsets = dt.offsets,
   pop = covimod$pop
 )
 
-saveRDS(covimod.processed, file="../data/COVIMOD/COVIMOD-multi.rds")
+data_name <- paste("COVIMOD_multi", SEED, sep = "_")
+saveRDS(covimod_processed, 
+        file = file.path("../data",
+                         "COVIMOD",
+                         paste0(data_name, ".rds")))
 ```
 
 

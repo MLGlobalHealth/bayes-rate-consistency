@@ -14,72 +14,64 @@ library(viridis)
 library(pammtools)
 
 ##### ---------- I/O ---------- #####
+cat(" Configuring IO...\n")
+
 option_list <- list(
-  optparse::make_option("--repo_path", type = "character", default = "/rds/general/user/sd121/home/covimod-gp",
-                        help = "Absolute file path to repository directory, used as long we don t build an R package [default]",
-                        dest = 'repo.path'),
-  optparse::make_option("--model", type = "character", default = NA_character_,
-                        help = "Name of the model",
-                        dest = "model.name"),
-  optparse::make_option("--waves", type = "integer", default = 5,
-                        help = "Number of waves",
-                        dest = "waves"),
-  optparse::make_option("--mixing", type = "logical", default = TRUE,
-                        help = "Whether to assess mixing",
-                        dest = "mixing"),
-  optparse::make_option("--ppc", type = "logical", default = TRUE,
-                        help = "Whether to run posterior predictive checks",
-                        dest = "ppc"),
-  optparse::make_option("--plot", type = "logical", default = TRUE,
-                        help = "Whether to plot posterior distributions",
-                        dest = "plot")
+  make_option(c("-i", "--in"), type = "character", default = NA, help = "repository path", dest = "repo_path"),
+  make_option(c("-o", "--out"), type = "character", default = NA, help = "output path", dest = "out_path")
 )
+cli_params <- optparse::parse_args(optparse::OptionParser(option_list = option_list))
+config <- yaml::read_yaml(file.path(cli_params$repo_path, "config/covimod-longitudinal.yml"))
 
-args <- optparse::parse_args(optparse::OptionParser(option_list = option_list))
+data_path <- file.path(cli_params$repo_path,
+                       "data",
+                       config$data$path)
+data_name <- str_remove(tail(str_split(data_path, "/")[[1]], 1), ".rds")
 
-model.path <- file.path(args$repo.path, "stan_fits", paste0(args$model.name, ".rds"))
-data.path <- file.path(args$repo.path, "data/COVIMOD/COVIMOD-multi.rds")
+model_name <- paste(config$model$name, data_name, sep = "_")
+model_path <- file.path(cli_params$out_path,
+                        "stan_fits",
+                        paste0(model_name, ".rds"))
 
 # Error handling
-if(!file.exists(model.path)) {
-  cat("\n Model: ", model.path)
+if (!file.exists(model_path)) {
+  cat("\n Model: ", model_path)
   stop("The specified model does not exist!")
 }
 
 # Output directories
-export.path <- file.path(args$repo.path, "results", args$model.name)
-export.fig.path <- file.path(export.path, "figures")
-if(!dir.exists(export.path)){
-  dir.create(export.path, recursive = TRUE)
-  dir.create(export.fig.path)
+export_path <- file.path(cli_params$out_path, "results", model_name)
+export_fig_path <- file.path(export_path, "figures")
+if (!dir.exists(export_path)) {
+  dir.create(export_path, recursive = TRUE)
+  dir.create(export_fig_path)
 } else {
-  if(!dir.exists(export.fig.path)){
-    dir.create(export.fig.path)
+  if (!dir.exists(export_fig_path)) {
+    dir.create(export_fig_path, recursive = TRUE)
   }
 }
 
 ##### ---------- Setup ---------- #####
-options(mc.cores=10)
+options(mc.cores = 10)
 
-cat(paste("\n Model:", model.path, "\n"))
+cat(paste("\n Model:", model_path, "\n"))
 
-fit <- readRDS(model.path)
-data <- readRDS(data.path)
-dt.cnt <- data$contacts[wave <= args$waves]
-dt.off <- data$offsets[wave <= args$waves]
-dt.pop <- data$pop
+fit <- readRDS(model_path)
+data <- readRDS(data_path)
+dt_contacts <- data$contacts
+dt_offsets <- data$offsets
+dt_population <- data$pop
 
-source(file.path(args$repo.path, "R/covimod-utility.R"))
-source(file.path(args$repo.path, "R/stan-utility.R"))
-source(file.path(args$repo.path, "R/postprocess-diagnostic.R"))
-source(file.path(args$repo.path, "R/postprocess-plotting.R"))
+source(file.path(cli_params$repo_path, "R", "make_stan_data.R"))
+source(file.path(cli_params$repo_path, "R", "postprocess-diagnostic.R"))
+source(file.path(cli_params$repo_path, "R", "postprocess-plotting.R"))
 
 ##### ---------- Assess convergence and mixing ---------- #####
-if(args$mixing){
+if (config$postprocess$mixing) {
   cat(" Assess convergence and mixing ...\n")
 
   # Make convergence diagnostic tables
-  fit_summary <- make_convergence_diagnostic_stats(fit, outdir=export.path)
+  fit_summary <- make_convergence_diagnostic_stats(fit, outdir = export_path)
 
   # Make trace plots
   cat("  Making trace plots and pairs plots of GP params\n")
@@ -89,48 +81,59 @@ if(args$mixing){
   pars_po <- fit$draws(pars)
   np <- nuts_params(fit)
 
-  for(w in 1:args$waves){
+  for (w in 1:args$waves) {
     .pattern <- paste0(pars, "\\[", w, ",[1-4]\\]")
-    p <- bayesplot::mcmc_trace(pars_po, regex_pars = .pattern, facet_args = list(ncol=1), np=np)
-    ggsave(file = file.path(export.fig.path, paste0('mcmc_trace_', w, '.png')),
+    p <- bayesplot::mcmc_trace(pars_po,
+                               regex_pars = .pattern,
+                               facet_args = list(ncol=1),
+                               np = np)
+    ggsave(file = file.path(export_fig_path, paste0('mcmc_trace_', w, '.png')),
            plot = p, h = 20, w = 20, limitsize = FALSE)
 
-    p <- bayesplot::mcmc_pairs(pars_po, regex_pars = .pattern, off_diag_args=list(size=0.3, alpha=0.3), np=np)
-    ggsave(file = file.path(export.fig.path, paste0('mcmc_pairs_', w, '.png')),
+    p <- bayesplot::mcmc_pairs(pars_po,
+                               regex_pars = .pattern,
+                               off_diag_args = list(size = 0.3, alpha = 0.3),
+                               np = np)
+    ggsave(file = file.path(export_fig_path, paste0('mcmc_pairs_', w, '.png')),
            plot = p, h = 20, w = 20, limitsize = FALSE)
   }
-
-  cat(" DONE!\n")
 }
 
 ##### ---------- Posterior predictive checks ---------- #####
-if(args$ppc){
-  cat(" Making posterior predictive checks ...")
-  make_ppd_check(fit$draws("yhat_strata", inc_warmup = FALSE, format="draws_matrix"),
-                 dt.cnt, dt.offsets, outdir=export.path)
-  cat(" DONE!\n")
+if (config$postprocess$ppc) {
+  cat(" Making posterior predictive checks ...\n")
+  make_ppd_check(fit$draws("yhat_strata",
+                           inc_warmup = FALSE,
+                           format = "draws_matrix"),
+                 dt_contacts,
+                 dt_offsets,
+                 outdir = export_path)
 }
 
 ##### ---------- Plotting ---------- #####
-if(args$plot){
+if (config$postprocess$plot) {
   cat(" Extracting posterior estimates ...\n")
 
-  # cat("  Summarising GP parameters ...\n")
-  # po_gp <- fit$draws(c("gp_sigma", "gp_rho_1", "gp_rho_2"), inc_warmup = FALSE)
-  # gp_parms_summary <- summarise_draws(po_gp, ~quantile(.x, probs = c(0.025, 0.25, 0.5, 0.75, 0.975)))
-  # saveRDS(gp_parms_summary, file = file.path(export.path, "gp_parms_summary.rds"))
+  cat("  Summarising GP parameters ...\n")
+  po_gp <- fit$draws(c("gp_sigma", "gp_rho_1", "gp_rho_2"), inc_warmup = FALSE)
+  gp_parms_summary <- summarise_draws(po_gp, ~quantile(.x, probs = c(0.025, 0.25, 0.5, 0.75, 0.975)))
+  saveRDS(gp_parms_summary,
+          file = file.path(export_path, "gp_parms_summary.rds"))
 
   po <- tryCatch(
     { # If time effects are present
-      po <- fit$draws(c("log_cnt_rate", "tau", "rho"), inc_warmup = FALSE, format="draws_matrix")
+      po <- fit$draws(c("log_cnt_rate", "tau", "rho"),
+                      inc_warmup = FALSE,
+                      format = "draws_matrix")
+
       cat(" Plotting time and repeat effects ...\n")
       # Plot betas
-      plot_time_effects(po, export.path)
-      plot_repeated_response_effects(po, export.path)
-      plot_time_repeat_pairs(po, export.path)
+      plot_time_effects(po, export_path)
+      plot_repeated_response_effects(po, export_path)
+      plot_time_repeat_pairs(po, export_path)
       po_tr <- subset_draws(po, variable = c("tau", "rho"), regex = TRUE)
       time_rep_summary <- summarise_draws(po_tr, ~quantile(.x, probs = c(0.025, 0.25, 0.5, 0.75, 0.975)))
-      saveRDS(time_rep_summary, file = file.path(export.path, "time_rep_summary.rds"))
+      saveRDS(time_rep_summary, file = file.path(export_path, "time_rep_summary.rds"))
       return(po)
     },
     error = function(e){
@@ -138,20 +141,36 @@ if(args$plot){
       po <- fit$draws(c("log_cnt_rate", "tau"), inc_warmup = FALSE, format="draws_matrix")
       time_rep_summary <- summarise_draws(subset_draws(po, variable = "tau"),
                                           ~quantile(.x, probs = c(0.025, 0.25, 0.5, 0.75, 0.975)))
-      saveRDS(time_rep_summary, file = file.path(export.path, "time_rep_summary.rds"))
-      plot_time_effects(po, export.path)
+      saveRDS(time_rep_summary, file = file.path(export_path, "time_rep_summary.rds"))
+      plot_time_effects(po, export_path)
       return(po)
     }
   )
 
   cat(" Extracting posterior contact intensities ...\n")
-  dt.po <- extract_posterior_intensity(po, dt.pop)
+  dt_posterior <- extract_posterior_intensity(po, dt_population)
 
-  dt.matrix <- summarise_posterior_intensity(dt.po, type="matrix", outdir=export.path)
-  dt.sliced <- summarise_posterior_intensity(dt.po, dt.off, type="sliced", outdir=export.path)
-  dt.margin.a <- summarise_posterior_intensity(dt.po, type="margin-a", outdir=export.path)
-  dt.margin.b <- summarise_posterior_intensity(dt.po, type="margin-b", outdir=export.path)
-  dt.margin.c <- summarise_posterior_intensity(dt.po, dt.off, type="margin-c", outdir=export.path)
+  dt_matrix <- summarise_posterior_intensity(dt_posterior,
+                                             type = "matrix",
+                                             outdir = export_path)
+
+  dt_sliced <- summarise_posterior_intensity(dt_posterior,
+                                             dt_offsets,
+                                             type = "sliced",
+                                             outdir = export_path)
+
+  dt_margin_a <- summarise_posterior_intensity(dt_posterior,
+                                               type = "margin-a",
+                                               outdir = export_path)
+
+  dt_margin_b <- summarise_posterior_intensity(dt_posterior,
+                                               type = "margin-b",
+                                               outdir = export_path)
+
+  dt_margin_c <- summarise_posterior_intensity(dt_posterior,
+                                               dt_offsets,
+                                               type = "margin-c",
+                                               outdir = export_path)
 }
 
 cat("\n DONE.\n")
