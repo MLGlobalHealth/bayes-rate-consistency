@@ -3,12 +3,12 @@ library(ggplot2)
 library(ggpubr)
 library(patchwork)
 
-repo.path <- "~/Imperial/covimod-gp"
+repo.path <- "~/bayes-rate-consistency-output"
 
 # Simulated data
 dt.pre <- readRDS(file.path(repo.path, "data/simulations/datasets/preCOVID_2000_COVIMOD/data_1.rds"))
 dt.classic.pre <- readRDS(file.path(repo.path, "results/preCOVID_2000_COVIMOD/hsgp-m52-cd-20-20_1/intensity_matrix.rds"))
-dt.restruct.pre <- readRDS(file.path(repo.path, "results/preCOVID_2000_COVIMOD/hsgp-m52-rd-40-20_1/intensity_matrix.rds"))
+dt.restruct.pre <- readRDS(file.path(repo.path, "results/preCOVID_2000_COVIMOD/hsgp-m52-rd-30-20-1/intensity_matrix.rds"))
 
 # Plot only MM contacts
 dt.pre <- dt.pre[gender == "Male" & alter_gender == "Male"]

@@ -35,7 +35,6 @@ if (!file.exists(export_path)) {
 cat(" Loading data...\n")
 # Load helpers
 source(file.path(cli_params$repo_path, "R/make_stan_data.R"))
-# source(file.path(cli_params$repo_path, "R/covimod-utility.R"))
 
 # Load data
 covimod <- readRDS(file.path(cli_params$repo_path,

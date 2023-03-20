@@ -84,7 +84,7 @@ if (config$postprocess$mixing) {
   pars_po <- fit$draws(pars)
   np <- nuts_params(fit)
 
-  for (w in 1:args$waves) {
+  for (w in 1:config$data$waves) {
     .pattern <- paste0(pars, "\\[", w, ",[1-4]\\]")
     p <- bayesplot::mcmc_trace(pars_po,
                                regex_pars = .pattern,

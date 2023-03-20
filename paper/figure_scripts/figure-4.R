@@ -3,34 +3,61 @@ library(socialmixr)
 library(patchwork)
 library(ggplot2)
 
-source("~/Imperial/covimod-gp/R/covimod-utility.R")
-source("~/Imperial/covimod-gp/R/stan-utility.R")
+source("~/bayes-rate-consistency/R/make_stan_data.R")
 
 ##### Empirical estimates #####
 plot_empricial <- function(.wave, cap = 3){
-  covimod_data <- readRDS("~/Imperial/covimod-gp/data/COVIMOD/COVIMOD-single.rds")
-  dt.cnt <- covimod_data$contacts[wave == .wave]
-  dt.off <- covimod_data$offsets[wave == .wave]
+  data_name <- paste0(paste("COVIMOD", "wave", .wave, sep = "_"), ".rds")
+  covimod_data <- readRDS(file.path("~/bayes-rate-consistency/data/COVIMOD", data_name))
+  dt_contacts <- covimod_data$contacts
+  dt_offsets <- covimod_data$offsets
 
-  dt.cnt <- dt.cnt[, !"wave"]
-  dt.off <- dt.off[, !c("wave", "N", "zeta")]
+  dt_offsets <- dt_offsets[, !c("N", "S")]
 
-  dt.cnt <- merge(make_grid(84, gender = TRUE), dt.cnt, by=c("age","gender","alter_age_strata","alter_gender"), all.x = TRUE)
-  dt <- merge(dt.cnt, dt.off, by=c("age", "gender"), all.x = TRUE)
+  dt_contacts <- merge(make_grid(84, gender = TRUE),
+                       dt_contacts,
+                       by = c("age","gender","alter_age_strata","alter_gender"),
+                       all.x = TRUE)
+  dt <- merge(dt_contacts,
+              dt_offsets,
+              by = c("age", "gender"),
+              all.x = TRUE)
 
   dt[is.na(y) & !is.na(N), y := 0.0]
-  dt[is.na(zeta) & !is.na(N), zeta := 1.0]
+  dt[is.na(S) & !is.na(N), S := 1.0]
 
   dt[, comb := paste(gender, "to", alter_gender)]
-  dt[, m := y / N * 1/zeta]
-  dt[m > cap, m := cap]
+  dt[, m := y / N * 1/S]
+  # dt[m > cap, m := cap]
   dt <- dt[!is.na(m)]
 
-  ggplot(dt, aes(x = age, alter_age_strata)) +
+  # Normalize age groups
+  dt[!(alter_age_strata %in% c("25-34", "35-44", "45-54", "55-64")), m := m/5]
+  dt[alter_age_strata %in% c("25-34", "35-44", "45-54", "55-64"), m := m/10]
+
+  # Create index
+  dt[, alter_age_idx := as.numeric(alter_age_strata)]
+
+  dt[alter_age_idx > 6, alter_age_idx := alter_age_idx + 1]
+  dt[alter_age_idx > 8, alter_age_idx := alter_age_idx + 1]
+  dt[alter_age_idx > 10, alter_age_idx := alter_age_idx + 1]
+  dt[alter_age_idx > 12, alter_age_idx := alter_age_idx + 1]
+
+  dt_copy <- copy(dt[alter_age_strata %in% c("25-34", "35-44", "45-54", "55-64")])
+  dt_copy[, alter_age_idx := alter_age_idx + 1]
+
+  dt <- rbind(dt, dt_copy)
+
+  ggplot(dt, aes(x = age, alter_age_idx)) +
     geom_tile(aes(fill = m)) +
     facet_grid(~comb) +
     scale_x_continuous(expand = c(0,0), limits = c(0,84)) +
-    scale_y_discrete(expand = c(0,0)) +
+    scale_y_continuous(expand = c(0,0),
+                       breaks = c(1, 2, 3, 4, 5, 6.5, 8.5, 10.5, 12.5, 14, 15, 16, 17),
+                       labels = c("0-4", "5-9", "10-14", "15-19",
+                                  "20-24", "25-34", "35-44",
+                                  "45-54", "55-64", "65-69",
+                                  "70-74", "75-79", "80-84")) +
     labs(x = "", y = "Age of contacts", fill = "Intensity") +
     viridis::scale_fill_viridis(option = "H") +
     theme_bw() +
@@ -66,14 +93,16 @@ process_pop_data <- function(x){
 }
 
 preprocess_covimod <- function(.wave){
-  covimod_data <- load_covimod_data("~/Imperial/covimod-gp")
+  source("~/bayes-rate-consistency/R/load_covimod_data.R")
+  source("~/bayes-rate-consistency/R/fill_missing_child_ages.R")
+  covimod_data <- load_covimod_data("~/bayes-rate-consistency")
 
   dt.part <- covimod_data$part
   dt.nhh <- covimod_data$nhh
   dt.hh <- covimod_data$hh
 
   # Impute child age
-  dt.part <- impute_child_age(dt.part, seed=1527)
+  dt.part <- fill_missing_child_ages(dt.part, seed=1527)
   setnames(dt.part, old = c("new_id", "imp_age"), new = c("part_id", "part_age"))
   dt.part$country <- "Germany"
   dt.part <- dt.part[age_strata != "85+"]
@@ -164,19 +193,56 @@ plot_socialmixr <- function(.wave){
                     comb == 3, "Male to Female",
                     comb == 4, "Female to Male")]
 
+  dt[alter_age %in% c("25-34", "35-44", "45-54", "55-64"), contacts := contacts / 10]
+  dt[!(alter_age %in% c("25-34", "35-44", "45-54", "55-64")), contacts := contacts / 5]
+
+  # Create index
+  dt[, age_idx := as.numeric(age)]
+  dt[, alter_age_idx := as.numeric(alter_age)]
+
+  dt[age_idx > 6, age_idx := age_idx + 1]
+  dt[age_idx > 8, age_idx := age_idx + 1]
+  dt[age_idx > 10, age_idx := age_idx + 1]
+  dt[age_idx > 12, age_idx := age_idx + 1]
+
+  dt[alter_age_idx > 6, alter_age_idx := alter_age_idx + 1]
+  dt[alter_age_idx > 8, alter_age_idx := alter_age_idx + 1]
+  dt[alter_age_idx > 10, alter_age_idx := alter_age_idx + 1]
+  dt[alter_age_idx > 12, alter_age_idx := alter_age_idx + 1]
+
+  dt_copy <- copy(dt[alter_age %in% c("25-34", "35-44", "45-54", "55-64")])
+  dt_copy_2 <- copy(dt[age %in% c("25-34", "35-44", "45-54", "55-64")])
+  dt_copy_3 <- copy(dt[age %in% c("25-34", "35-44", "45-54", "55-64") &
+                       alter_age %in% c("25-34", "35-44", "45-54", "55-64")])
+
+  dt_copy[, alter_age_idx := alter_age_idx + 1]
+  dt_copy_2[, age_idx := age_idx + 1]
+  dt_copy_3[, `:=`(age_idx = age_idx + 1,
+                   alter_age_idx = alter_age_idx + 1)]
+
+  dt <- rbind(dt, dt_copy, dt_copy_2, dt_copy_3)
+
+  age_strata <- c("0-4", "5-9", "10-14", "15-19",
+                  "20-24", "25-34", "35-44",
+                  "45-54", "55-64", "65-69",
+                  "70-74", "75-79", "80-84")
   # Plot
-  ggplot(dt, aes(x = age, y = alter_age)) +
+  ggplot(dt, aes(x = age_idx, y = alter_age_idx)) +
     geom_tile(aes(fill = contacts)) +
-    viridis::scale_fill_viridis(option = "H", limits = c(0, 1.25)) +
-    scale_y_discrete(expand = c(0,0)) +
-    scale_x_discrete(expand = c(0,0)) +
+    viridis::scale_fill_viridis(option = "H", limits = c(0, NA)) +
+    scale_y_continuous(expand = c(0,0),
+                       breaks = c(1, 2, 3, 4, 5, 6.5, 8.5, 10.5, 12.5, 14, 15, 16, 17),
+                       labels = age_strata) +
+    scale_x_continuous(expand = c(0,0),
+                       breaks = c(1, 2, 3, 4, 5, 6.5, 8.5, 10.5, 12.5, 14, 15, 16, 17),
+                       labels = age_strata) +
     labs(x = "", y = "Age of contacts", fill = "Intensity") +
     facet_wrap(~comb, ncol = 4, nrow = 1) +
     theme_bw() +
     guides(fill = guide_colourbar(barwidth = 0.8)) +
     theme(
       aspect.ratio = 1,
-      axis.text.x = element_text(size = 7, vjust = 0.7, angle = 45),
+      axis.text.x = element_text(size = 7, hjust = 1, angle = 45),
       axis.text.y = element_text(size = 7),
       axis.title.x = element_blank(),
       axis.title.y = element_text(size = 8),
