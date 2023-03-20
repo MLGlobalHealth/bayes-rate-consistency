@@ -1,18 +1,27 @@
-#!/bin/sh
+#!/bin/bash
+REPO_PATH="/rds/general/user/sd121/home/bayes-rate-consistency"
+OUT_PATH="/rds/general/user/sd121/home/bayes-rate-consistency-output"
+CONFIG_FILE="covimod-longitudinal.yml"
 
+# Create main script
+cat > "$OUT_PATH/covimod-postproc.pbs" <<EOF
+#!/bin/bash
 #PBS -l walltime=08:00:00
-#PBS -l select=1:ncpus=10:mem=512gb
-
-REPO_PATH=/rds/general/user/sd121/home/covimod-gp
-MODEL="hsgp-m52-lrd-noadj"
-WAVES=5
-MIXING=FALSE
-PPC=FALSE
-PLOT=TRUE
+#PBS -l select=1:ncpus=8:ompthreads=1:mem=100gb
 
 module load anaconda3/personal
-source activate Renv
+source activate bayes-rate-consistency
 
-MODEL=${MODEL}-${WAVES}
+# Move into repository
+cd $REPO_PATH
 
-Rscript $REPO_PATH/scripts/postprocess.R --model $MODEL --mixing $MIXING --ppc $PPC --plot $PLOT
+# Postprocessing
+Rscript scripts/postprocess.R \
+  -i "$REPO_PATH" \
+  -o "$OUT_PATH" \
+  --config "$CONFIG_FILE"
+EOF
+
+# Execute main script
+cd $OUT_PATH
+qsub "covimod-postproc.pbs"
