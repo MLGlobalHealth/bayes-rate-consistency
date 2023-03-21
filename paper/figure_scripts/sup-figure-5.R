@@ -3,10 +3,11 @@ library(data.table)
 library(ggplot2)
 library(ggpubr)
 
-source("~/Imperial/covimod-gp/R/covimod-utility.R")
+source("~/bayes-rate-consistency/R/load_covimod_data.R")
+source("~/bayes-rate-consistency/R/fill_missing_child_ages.R")
 
 # Load data
-covimod <- load_covimod_data("~/Imperial/covimod-gp")
+covimod <- load_covimod_data("~/bayes-rate-consistency")
 dt.part <- covimod$part
 dt.nhh <- covimod$nhh
 dt.hh <- covimod$hh
@@ -27,7 +28,7 @@ dt.part[, rep := rep - 1]
 dt.part[, rep := ifelse(rep > 4, 4, rep)]
 
 # Impute children age by sampling from uniform distribution
-dt.part <- impute_child_age(dt.part, seed=1527)
+dt.part <- fill_missing_child_ages(dt.part, seed=1527)
 
 ## Non-household contacts
 ### Ambiguous contacts
@@ -83,8 +84,8 @@ dt.sum <- rbind(dt.cmb, dt.amb, dt.grp)
 dt.sum <- dt.sum[, .(y = sum(y, na.rm=T)), by=.(wave, type, imp_age, gender)]
 dt.sum$type2 <- case_when(dt.sum$type == "hh" ~ "Household",
                           dt.sum$type == "nhh" ~ "Non-household",
-                          dt.sum$type == "grp" ~ "Aggregated")
-dt.sum$type2 <- factor(dt.sum$type2, levels=rev(c("Household", "Non-household", "Aggregated")))
+                          dt.sum$type == "grp" ~ "Missing & aggregate")
+dt.sum$type2 <- factor(dt.sum$type2, levels=rev(c("Household", "Non-household", "Missing & aggregate")))
 
 dt.sum.sum <- dt.sum[, .(y = sum(y, na.rm=T)), by =.(wave, gender)]
 dt.sum.sum <- dt.sum.sum[!is.na(gender)]
@@ -110,5 +111,5 @@ ggplot(dt.sum[imp_age < 85], aes(imp_age, y)) +
     panel.grid.minor = element_blank()
   )
 
-ggsave("~/Imperial/covimod-gp/paper/figures/sup-figure-5.jpeg",
+ggsave("~/bayes-rate-consistency/paper/figures/sup-figure-5.jpeg",
        units = "cm", width = 18, height = 18, dpi = 300)

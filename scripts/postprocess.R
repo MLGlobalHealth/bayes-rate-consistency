@@ -149,31 +149,33 @@ if (config$postprocess$plot) {
       return(po)
     }
   )
-
-  cat(" Extracting posterior contact intensities ...\n")
-  dt_posterior <- extract_posterior_intensity(po, dt_population)
-
-  dt_matrix <- summarise_posterior_intensity(dt_posterior,
-                                             type = "matrix",
-                                             outdir = export_path)
-
-  dt_sliced <- summarise_posterior_intensity(dt_posterior,
-                                             dt_offsets,
-                                             type = "sliced",
-                                             outdir = export_path)
-
-  dt_margin_a <- summarise_posterior_intensity(dt_posterior,
-                                               type = "margin-a",
-                                               outdir = export_path)
-
-  dt_margin_b <- summarise_posterior_intensity(dt_posterior,
-                                               type = "margin-b",
-                                               outdir = export_path)
-
-  dt_margin_c <- summarise_posterior_intensity(dt_posterior,
-                                               dt_offsets,
-                                               type = "margin-c",
-                                               outdir = export_path)
 }
+
+cat(" Extracting posterior contact intensities ...\n")
+po <- fit$draws("log_cnt_rate", inc_warmup = FALSE, format = "draws_matrix")
+dt_posterior <- extract_posterior_intensity(po, dt_population)
+
+dt_matrix <- summarise_posterior_intensity(dt_posterior,
+                                           type = "matrix",
+                                           outdir = export_path)
+
+dt_sliced <- summarise_posterior_intensity(dt_posterior,
+                                           dt_offsets,
+                                           type = "sliced",
+                                           outdir = export_path)
+
+dt_margin_a <- summarise_posterior_intensity(dt_posterior,
+                                             type = "margin-a",
+                                             outdir = export_path)
+
+dt_margin_b <- summarise_posterior_intensity(dt_posterior,
+                                             type = "margin-b",
+                                             outdir = export_path)
+
+dt_margin_c <- summarise_posterior_intensity(dt_posterior,
+                                             dt_offsets,
+                                             type = "margin-c",
+                                             outdir = export_path)
+
 
 cat("\n DONE.\n")
