@@ -80,25 +80,25 @@ extract_posterior_intensity <- function(posterior_draws, dt_population){
   dt_posterior <- as.data.table(reshape2::melt(posterior_draws))
 
   # Extract indices
-  .pattern <- "log_cnt_rate\\[([0-9]+),([0-9]+),([0-9]+),([0-9]+)\\]"
-
-  dt_posterior[, wave := as.numeric(gsub(.pattern, "\\1", variable))]
-  dt_posterior[, comb_idx := as.numeric(gsub(.pattern, "\\2", variable))]
-  dt_posterior[, age_idx := as.numeric(gsub(.pattern, "\\3", variable))]
-  dt_posterior[, alter_age_idx := as.numeric(gsub(.pattern, "\\4", variable))]
+  pattern <- "log_cnt_rate\\[([0-9]+),([0-9]+),([0-9]+),([0-9]+)\\]"
+  indices <- str_match(dt_posterior$variable, pattern)[,2:4]
+  dt_posterior$wave <- as.numeric(indices[,1])
+  dt_posterior$gender_pair_idx <- as.numeric(indices[,1])
+  dt_posterior$age_idx <- as.numeric(indices[,2])
+  dt_posterior$alter_age_idx <- as.numeric(indices[,3])
 
   # Recover age and gender
   dt_posterior[, age := age_idx - 1]
   dt_posterior[, alter_age := alter_age_idx - 1]
-  dt_posterior[, gender := fcase(comb_idx %in% c(1,3), "Male",
-                          comb_idx %in% c(2,4), "Female", default = NA)]
-  dt_posterior[, alter_gender := fcase(comb_idx %in% c(1,4), "Male",
-                                comb_idx %in% c(2,3), "Female", default = NA)]
+  dt_posterior[, gender := fcase(gender_pair_idx %in% c(1,3), "Male",
+                          gender_pair_idx %in% c(2,4), "Female", default = NA)]
+  dt_posterior[, alter_gender := fcase(gender_pair_idx %in% c(1,4), "Male",
+                                gender_pair_idx %in% c(2,3), "Female", default = NA)]
 
   # Remove unnecessary columns
   dt_posterior[, age_idx := NULL]
   dt_posterior[, alter_age_idx := NULL]
-  dt_posterior[, comb_idx := NULL]
+  dt_posterior[, gender_pair_idx := NULL]
 
   # Merge with population data
   dt_posterior <- merge(dt_posterior, dt_population,
@@ -116,7 +116,7 @@ summarise_posterior_intensity <- function(dt_posterior, dt.off = NULL, type="mat
   ps <- c(0.5, 0.025, 0.975)
   p_labs <- c('M','CL','CU')
 
-  if(type=="matrix"){ # Full contact intensity matrix
+  if (type == "matrix") { # Full contact intensity matrix
     # Calculate quantiles
     dt <- dt_posterior[,  .(q=quantile(value, prob=ps, na.rm=T), q_label = p_labs),
                 by = .(wave, age, gender, alter_age, alter_gender)]
@@ -129,7 +129,6 @@ summarise_posterior_intensity <- function(dt_posterior, dt.off = NULL, type="mat
       warning("\n outdir is not specified. Results were not saved.")
     }
 
-    gc()
     return(dt)
 
   } else if (type=="sliced") { # Sliced contact intensity (gender combined)

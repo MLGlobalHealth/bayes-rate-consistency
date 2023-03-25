@@ -27,6 +27,8 @@ contact_data <- readRDS(file.path(cli_args$repo_path,
                                   "data",
                                   config$data$path))
 
+contact_data <- list(contacts = contact_data$contacts, offsets = contact_data$offsets, population = contact_data$pop)
+
 # Unpack data
 dt_contacts <- contact_data$contacts
 dt_offsets <- contact_data$offsets

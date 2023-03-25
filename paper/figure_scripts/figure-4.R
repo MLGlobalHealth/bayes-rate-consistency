@@ -28,7 +28,7 @@ plot_empricial <- function(.wave, cap = 3){
 
   dt[, comb := paste(gender, "to", alter_gender)]
   dt[, m := y / N * 1/S]
-  # dt[m > cap, m := cap]
+  dt[m > cap, m := cap]
   dt <- dt[!is.na(m)]
 
   # Normalize age groups
@@ -259,7 +259,7 @@ plt_socialmixr <- plot_socialmixr(.wave = 1)
 
 ##### Estimated contact intensities #####
 plot_gp <- function(.wave){
-  dt <- readRDS("~/Imperial/covimod-gp/results/hsgp-m52-lrd-5/intensity_matrix.rds")
+  dt <- readRDS("~/bayes-rate-consistency-output/results/hsgp-m52-lrd_COVIMOD_multi_1234/intensity_matrix.rds")
   dt <- dt[wave == .wave]
   dt[, comb := paste(gender, "to", alter_gender)]
 
@@ -288,4 +288,4 @@ plt_gp <- plot_gp(1)
 
 plt_empirical / plt_socialmixr / plt_gp + plot_layout(nrow = 3)
 
-ggsave("~/Imperial/covimod-gp/paper/figures/figure-4.jpeg", width = 19, height = 15.5, units = "cm")
+ggsave("~/bayes-rate-consistency/paper/figures/figure-4.jpeg", width = 19, height = 15.5, units = "cm")

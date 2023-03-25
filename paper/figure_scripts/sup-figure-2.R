@@ -1,42 +1,43 @@
-
-# Load libraries
 library(data.table)
 library(ggplot2)
-library(patchwork)
 
-# Load results
-dt.pre.se <- readRDS("~/Imperial/covimod-gp/results/preCOVID_2000_COVIMOD/hsgp-eq-rd-40-20_1/intensity_matrix.rds") # Pre-COVID19
-dt.pre.m52 <- readRDS("~/Imperial/covimod-gp/results/preCOVID_2000_COVIMOD/hsgp-m52-rd-40-20_1/intensity_matrix.rds") # Pre-COVID19
-dt.pre.m32 <- readRDS("~/Imperial/covimod-gp/results/preCOVID_2000_COVIMOD/hsgp-m32-rd-40-20_1/intensity_matrix.rds") # Pre-COVID19
+data <- readRDS("~/bayes-rate-consistency/data/COVIMOD/COVIMOD_multi_1527.rds")
+dt_contacts <- data$contacts
+dt_contacts[, t := y/S - y]
 
-plot_simulation <- function(data, title = NULL){
-  data[, comb := paste(gender, "to", alter_gender)]
+dt_sum <- dt_contacts[, .(y = sum(y),
+                          t = sum(t)),
+                      by = .(wave, age, gender)]
+setnames(dt_sum, c("y", "t"), c("Individually reported", "Missing & aggregate"))
 
-  ggplot(data, aes(age, alter_age)) +
-    geom_tile(aes(fill = intensity_M)) +
-    coord_equal(expand = 0) +
-    viridis::scale_fill_viridis(option = "H", limits = c(0,2)) +
-    guides(fill = guide_colourbar(barwidth = 0.8)) +
-    facet_grid(~comb) +
-    labs(x = "Age of contacting individual", y = "Age of contact", fill = "Intensity",
-         title = title) +
-    theme_bw() +
-    theme(
-      plot.title = element_text(size = 10, margin = margin(0, 0, -10, 0)),
-      axis.text = element_text(size = 8),
-      axis.title = element_text(size = 8),
-      strip.text = element_text(size = 8),
-      strip.background = element_blank(),
-      legend.title = element_text(size = 8),
-      legend.text = element_text(size = 8),
-      legend.margin = margin(l = -0.2, unit = "cm"),
-    )
-}
+dt_sum <- melt(dt_sum,
+               id.vars = c("wave", "age", "gender"),
+               measure.vars = c("Individually reported", "Missing & aggregate"),
+               variable.name = "type",
+               value.name = "contacts")
 
-plt.se  <- plot_simulation(dt.pre.se, title = "Pre-COVID19, N=2000, Squared exponential kernel")
-plt.m52 <- plot_simulation(dt.pre.m52, title = "Pre-COVID19, N=2000, Matérn 5/2 kernel")
-plt.m32 <- plot_simulation(dt.pre.m32, title = "Pre-COVID19, N=2000, Matérn 3/2 kernel")
+dt_sum[, proportion := contacts / sum(contacts), by = .(wave, age, gender)]
+dt_sum[, type := factor(type, levels = c("Missing & aggregate", "Individually reported"))]
 
-plt.se / plt.m52 / plt.m32 + plot_layout(nrow = 3, guides = "collect")
+ggplot(dt_sum[age < 85], aes(age, proportion)) +
+  geom_bar(aes(fill = type), stat="identity") +
+  scale_x_continuous(expand = c(0,0)) +
+  scale_y_continuous(expand = c(0,0), labels = scales::percent_format()) +
+  scale_fill_manual(values = rev(c("#0D353F", "#F57D6C"))) +
+  labs(x = "Participant age", y = "Percentage", fill = "Contact type") +
+  facet_grid(paste("Wave", wave) ~ gender) +
+  theme_bw() +
+  theme(
+    legend.position = "bottom",
+    legend.text = element_text(size = 8),
+    legend.title = element_text(size = 8),
+    legend.margin = margin(t = -2),
+    strip.background = element_blank(),
+    strip.text = element_text(size = 8),
+    axis.text = element_text(size = 8),
+    axis.title = element_text(size = 8),
+    panel.grid.minor = element_blank()
+  )
 
-ggsave("~/Imperial/covimod-gp/paper/figures/sup-figure-2.jpeg", width = 18, height = 18, units = "cm")
+ggsave("~/bayes-rate-consistency/paper/figures/sup-figure-2.jpeg",
+       units = "cm", width = 18, height = 18, dpi = 300)
