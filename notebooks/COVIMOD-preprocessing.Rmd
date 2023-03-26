@@ -23,7 +23,7 @@ source("../R/load_covimod_data.R")
 source("../R/fill_missing_child_ages.R")
 source("../R/age_gender_grid.R")
 
-SEED <- 0721
+SEED <- 1234
 ```
 
 ## Load data

@@ -75,52 +75,52 @@ source(file.path(cli_args$repo_path, "R/posterior_contact_intensity.R"))
 cat(" Assess convergence and mixing ...\n")
 
 # Make convergence diagnostic tables
-# fit_summary <- convergence_diagnostic_stats(fit, outdir = export_path)
+fit_summary <- convergence_diagnostic_stats(fit, outdir = export_path)
 
 # Make trace plots
 cat("\n Making trace plots")
 
-# pars <- c('nu', 'gp_alpha', 'gp_rho_1', 'gp_rho_2')
-# pars_po <- fit$draws(pars)
-# p <- bayesplot::mcmc_trace(pars_po,
-#                            facet_args = list(nrow = 10, ncol = 1))
-# ggsave(file = file.path(export_fig_path, 'mcmc_trace_parameters.png'),
-#        plot = p,
-#        h = 20,
-#        w = 20,
-#        limitsize = F)
-#
-# # Make pairs plots
-# cat(" Making pairs plots\n")
-# p <- bayesplot::mcmc_pairs(pars_po,
-#                            off_diag_args = list(size = 0.3, alpha = 0.3))
-# ggsave(file = file.path(export_fig_path, 'mcmc_pairs_parameters.png'),
-#        plot = p,
-#        h = 20,
-#        w = 20,
-#        limitsize = F)
-#
-# ##### ---------- Posterior predictive checks ---------- #####
-# cat(" Extracting posterior ...\n")
+pars <- c('nu', 'gp_alpha', 'gp_rho_1', 'gp_rho_2')
+pars_po <- fit$draws(pars)
+p <- bayesplot::mcmc_trace(pars_po,
+                           facet_args = list(nrow = 10, ncol = 1))
+ggsave(file = file.path(export_fig_path, 'mcmc_trace_parameters.png'),
+       plot = p,
+       h = 20,
+       w = 20,
+       limitsize = F)
+
+# Make pairs plots
+cat(" Making pairs plots\n")
+p <- bayesplot::mcmc_pairs(pars_po,
+                           off_diag_args = list(size = 0.3, alpha = 0.3))
+ggsave(file = file.path(export_fig_path, 'mcmc_pairs_parameters.png'),
+       plot = p,
+       h = 20,
+       w = 20,
+       limitsize = F)
+
+###### ---------- Posterior predictive checks ---------- #####
+cat(" Extracting posterior ...\n")
 posterior_draws <- fit$draws(c("yhat_strata", "log_cnt_rate"),
                              inc_warmup = FALSE,
                              format = "draws_matrix")
-#
-# cat(" Making posterior predictive checks ...\n")
-#
-# dt_ppc <- posterior_predictive_check(posterior_draws,
-#                                      dt_contacts,
-#                                      single_contact_age = config$data$single_contact_age,
-#                                      outdir = export_path)
-#
-# cat(" Extracting posterior contact intensities ...\n")
+
+cat(" Making posterior predictive checks ...\n")
+
+dt_ppc <- posterior_predictive_check(posterior_draws,
+                                     dt_contacts,
+                                     single_contact_age = config$data$single_contact_age,
+                                     outdir = export_path)
+
+cat(" Extracting posterior contact intensities ...\n")
 
 dt_posterior <- posterior_log_contact_rates(posterior_draws)
 
-# dt_matrix <- posterior_contact_intensity(dt_posterior,
-#                                          dt_population,
-#                                          type = "matrix",
-#                                          outdir = export_path)
+dt_matrix <- posterior_contact_intensity(dt_posterior,
+                                         dt_population,
+                                         type = "matrix",
+                                         outdir = export_path)
 
 dt_margin <- posterior_contact_intensity(dt_posterior,
                                          dt_population,
