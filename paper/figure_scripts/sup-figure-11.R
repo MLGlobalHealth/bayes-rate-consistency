@@ -4,7 +4,7 @@ library(posterior)
 library(cmdstanr)
 library(ggplot2)
 
-cat("========== Making trace plots ==========\n")
+cat("\n========== Making trace plots ==========\n")
 cat(" Loading fit summary...\n")
 fit_summary <- readRDS("~/bayes-rate-consistency-output/results/hsgp-m52-lrd_COVIMOD_multi_1234/fit_summary.rds")
 
@@ -29,7 +29,7 @@ plt <- bayesplot::mcmc_trace(posterior_draws,
         plot.subtitle = element_text(size = 8))
 
 cat(" Saving plots...\n")
-if (dir.exists("~/bayes-rate-consistency/paper/figures")) {
+if (!dir.exists("~/bayes-rate-consistency/paper/figures")) {
   dir.create("~/bayes-rate-consistency/paper/figures", recursive = TRUE)
 }
 ggsave(file = file.path("~/bayes-rate-consistency/paper/figures",
@@ -38,6 +38,7 @@ ggsave(file = file.path("~/bayes-rate-consistency/paper/figures",
        width = 19,
        height = 10.5,
        units = "cm")
+cat(" DONE.\n")
 
 
 
