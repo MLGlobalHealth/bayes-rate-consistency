@@ -25,6 +25,8 @@ plt <- bayesplot::mcmc_trace(posterior_draws,
   theme(axis.title = element_text(size = 8),
         axis.text = element_text(size = 8),
         strip.text = element_text(size = 8),
+        legend.text = element_text(size = 8),
+        legend.title = element_text(size = 8),
         plot.title = element_text(size = 9),
         plot.subtitle = element_text(size = 8))
 
@@ -33,7 +35,7 @@ if (!dir.exists("~/bayes-rate-consistency/paper/figures")) {
   dir.create("~/bayes-rate-consistency/paper/figures", recursive = TRUE)
 }
 ggsave(file = file.path("~/bayes-rate-consistency/paper/figures",
-                        'sup-figure-11.jpeg'),
+                        'sup-figure-11.png'),
        plot = plt,
        width = 19,
        height = 10.5,
