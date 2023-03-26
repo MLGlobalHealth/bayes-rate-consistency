@@ -2,6 +2,7 @@ library(data.table)
 library(bayesplot)
 library(posterior)
 library(cmdstanr)
+library(ggplot2)
 
 
 fit_summary <- readRDS("~/bayes-rate-consistency-output/results/hsgp-m52-lrd_COVIMOD_multi_1234/fit_summary.rds")
