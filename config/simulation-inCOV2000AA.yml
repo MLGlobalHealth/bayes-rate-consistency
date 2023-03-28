@@ -2,13 +2,13 @@ seed: 1234
 
 data:
   size: 2000
-  covid: FALSE
+  covid: TRUE
   strata: "COVIMOD"
 
 model:
-  name: "2dgp-m52-rd"
+  name: "hsgp-m52-cd"
   hsgp_binf: 1.5
-  hsgp_m1: 30
+  hsgp_m1: 20
   hsgp_m2: 20
   chains: 4
   warmup: 500

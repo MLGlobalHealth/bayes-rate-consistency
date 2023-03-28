@@ -1,13 +1,13 @@
 #!/bin/bash
 REPO_PATH="/rds/general/user/sd121/home/bayes-rate-consistency"
 OUT_PATH="/rds/general/user/sd121/home/bayes-rate-consistency-output"
-CONFIG_FILE="covimod-longitudinal.yml"
+CONFIG_FILE="covimod-longitudinal-2.yml"
 
 # Create main script
 cat > "$OUT_PATH/covimod-postproc.pbs" <<EOF
 #!/bin/bash
 #PBS -l walltime=08:00:00
-#PBS -l select=1:ncpus=8:ompthreads=1:mem=100gb
+#PBS -l select=1:ncpus=8:ompthreads=1:mem=256gb
 
 module load anaconda3/personal
 source activate bayes-rate-consistency

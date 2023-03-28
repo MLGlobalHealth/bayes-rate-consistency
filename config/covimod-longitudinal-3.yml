@@ -1,7 +1,7 @@
 seed: 1234
 
 data:
-  path: "COVIMOD/COVIMOD_multi_1234.rds"
+  path: "COVIMOD/COVIMOD_multi_721.rds"
   waves: 5
   num_participant_age_groups: 85
   num_contact_age_groups: 13
@@ -10,7 +10,7 @@ data:
 model:
   name: "hsgp-m52-lrd"
   hsgp_binf: 1.5
-  hsgp_m1: 40
+  hsgp_m1: 30
   hsgp_m2: 20
   chains: 8
   warmup: 500
@@ -20,6 +20,6 @@ model:
   refresh: 50
 
 postprocess:
-  mixing: TRUE
+  mixing: FALSE
   ppc: FALSE
   plot: FALSE
