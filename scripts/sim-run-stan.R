@@ -93,9 +93,11 @@ if (str_detect(model_params$name, "hsgp")) {
   model_name <- paste(model_params$name,
                       model_params$hsgp_m1,
                       model_params$hsgp_m2,
-                      sep="-")
+                      sep = "-")
+} else if (str_detect(model_params$name, "2dgp")) {
+  model_name <- model_params$name
 }
-model_name <- paste(model_name, cli_params$pidx, sep="-") # Add array job index
+model_name <- paste(model_name, cli_params$pidx, sep = "-") # Add array job index
 fit$save_object(file = file.path(export_path, paste0(model_name, ".rds")))
 
 cat("\n DONE.\n")

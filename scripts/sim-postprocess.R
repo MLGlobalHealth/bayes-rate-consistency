@@ -51,10 +51,15 @@ dataset_name <- paste(ifelse(data_params$covid, "inCOVID", "preCOVID"),
                       sep = "_")
 
 model_params <- experiment_params$model
-model_name <- paste(model_params$name,
-                    model_params$hsgp_m1,
-                    model_params$hsgp_m2,
-                    sep = "-")
+
+if (str_detect(model_params$name, "hsgp")) {
+  model_name <- paste(model_params$name,
+                      model_params$hsgp_m1,
+                      model_params$hsgp_m2,
+                      sep = "-")
+} else if (str_detect(model_params$name, "2dgp")) {
+  model_name <- model_params$name
+}
 
 fit_path <- file.path(cli_params$out_path,
                       "stan_fits",
