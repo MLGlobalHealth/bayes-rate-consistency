@@ -134,7 +134,7 @@ design <- "
 patchwork <- p_cases + p_death + p_sample + plot_layout(design = design)
 patchwork + plot_annotation(tag_levels = "A") & theme(plot.tag = element_text(size = 10))
 
-ggsave("~/Imperial/covimod-gp/paper/figures/figure-1.jpeg",
-       units = "cm", width = 19, height = 12, dpi = 300)
+ggsave("~/bayes-rate-consistency/paper/figures/figure-1.tiff",
+       device = "tiff", units = "cm", width = 19, height = 12, dpi = 300)
 
 

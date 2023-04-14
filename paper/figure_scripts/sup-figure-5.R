@@ -1,115 +1,42 @@
-library(tidyverse)
+
+# Load libraries
 library(data.table)
 library(ggplot2)
-library(ggpubr)
+library(patchwork)
 
-source("~/bayes-rate-consistency/R/load_covimod_data.R")
-source("~/bayes-rate-consistency/R/fill_missing_child_ages.R")
+# Load results
+dt.in.se <- readRDS("~/Imperial/covimod-gp/results/inCOVID_2000_COVIMOD/hsgp-eq-rd-40-20_1/intensity_matrix.rds")
+dt.in.m52 <- readRDS("~/Imperial/covimod-gp/results/inCOVID_2000_COVIMOD/hsgp-m52-rd-40-20_1/intensity_matrix.rds")
+dt.in.m32 <- readRDS("~/Imperial/covimod-gp/results/inCOVID_2000_COVIMOD/hsgp-m32-rd-40-20_1/intensity_matrix.rds")
 
-# Load data
-covimod <- load_covimod_data("~/bayes-rate-consistency")
-dt.part <- covimod$part
-dt.nhh <- covimod$nhh
-dt.hh <- covimod$hh
+plot_simulation <- function(data, title = NULL){
+  data[, comb := paste(gender, "to", alter_gender)]
 
-# Limit to first 5 waves
-dt.part <- dt.part[wave <= 5]
-dt.nhh <- dt.nhh[wave <= 5]
-dt.hh <- dt.hh[wave <= 5]
+  ggplot(data, aes(age, alter_age)) +
+    geom_tile(aes(fill = intensity_M)) +
+    coord_equal(expand = 0) +
+    viridis::scale_fill_viridis(option = "H", limits = c(0,2)) +
+    guides(fill = guide_colourbar(barwidth = 0.8)) +
+    facet_grid(~comb) +
+    labs(x = "Age of contacting individual", y = "Age of contact", fill = "Intensity",
+         title = title) +
+    theme_bw() +
+    theme(
+      plot.title = element_text(size = 10, margin = margin(0, 0, -10, 0)),
+      axis.text = element_text(size = 8),
+      axis.title = element_text(size = 8),
+      strip.text = element_text(size = 8),
+      strip.background = element_blank(),
+      legend.title = element_text(size = 8),
+      legend.text = element_text(size = 8),
+      legend.margin = margin(l = -0.2, unit = "cm"),
+    )
+}
 
-## Participant data
-# Remove participants with missing age-strata or gender information
-nrow(dt.part[is.na(gender) | is.na(age_strata)])
-dt.part <- dt.part[!is.na(gender) & !is.na(age_strata)]
+plt.se  <- plot_simulation(dt.in.se, title =  "In-COVID19, N=2000, Squared exponential kernel")
+plt.m52 <- plot_simulation(dt.in.m52, title = "In-COVID19, N=2000, Matérn 5/2 kernel")
+plt.m32 <- plot_simulation(dt.in.m32, title = "In-COVID19, N=2000, Matérn 3/2 kernel")
 
-# The number of times a participant repeatedly participated in the survey
-dt.part[, rep := seq_len(.N), by=.(new_id)]
-dt.part[, rep := rep - 1]
-dt.part[, rep := ifelse(rep > 4, 4, rep)]
+plt.se / plt.m52 / plt.m32 + plot_layout(nrow = 3, guides = "collect")
 
-# Impute children age by sampling from uniform distribution
-dt.part <- fill_missing_child_ages(dt.part, seed=1527)
-
-## Non-household contacts
-### Ambiguous contacts
-# Identify contacts with missing age and gender
-dt.amb <- dt.nhh[(is.na(alter_age_strata) | is.na(alter_gender))]
-
-# Treat all as missing (some have either gender or age-strata info)
-dt.amb <- dt.amb[, .(y_amb = .N), by=c("new_id", "wave")]
-dt.amb <- merge(dt.amb, dt.part[, .(new_id, wave, gender, imp_age)], by=c("new_id", "wave"), all.x = TRUE)
-
-# Remove ambiguous contacts from original nhh data
-dt.nhh <- dt.nhh[!(is.na(alter_age_strata) | is.na(alter_gender))]
-
-## Group Contacts
-SDcols_Q75 <- c("Q75_u18_work", "Q75_u18_school", "Q75_u18_else",
-                "Q75_1864_work", "Q75_1864_school", "Q75_1864_else",
-                "Q75_o64_work", "Q75_o64_school", "Q75_o64_else")
-
-SDcols_Q76 <- c("Q76_u18_work",  "Q76_u18_school",  "Q76_u18_else",
-                "Q76_1864_work", "Q76_1864_school", "Q76_1864_else",
-                "Q76_o64_work",  "Q76_o64_school",  "Q76_o64_else")
-
-dt.part[, y_grp := rowSums(.SD, na.rm = T), .SDcols = SDcols_Q75]
-dt.part[y_grp > 60, y_grp := 60]
-
-dt.grp <- dt.part[, .(y = sum(y_grp)), by=.(wave, imp_age, gender)]
-dt.grp$type <- "grp"
-
-## Combine household and non-household data
-setnames(dt.hh, "hh_met_this_day", "y")
-dt.hh$type <- "hh"
-
-dt.nhh$y <- 1
-dt.nhh$type <- "nhh"
-
-# Combine household and non-household contacts
-dt.cmb <- rbind(dt.nhh[,.(new_id, wave, type, alter_age_strata, alter_gender, y)],
-                dt.hh[,.(new_id, wave, type, alter_age_strata, alter_gender, y)])
-
-dt.cmb$type <- factor(dt.cmb$type, levels=c("hh", "nhh"))
-dt.cmb <- dt.cmb[order(wave, new_id),]
-
-# Merge with participant data
-dt.cmb <- merge(dt.cmb, dt.part, by=c("new_id", "wave"), all.x = TRUE)
-dt.cmb <- dt.cmb[, .(y = sum(y, na.rm = T)), by = .(wave, type, imp_age, gender)]
-
-dt.amb$type <- "grp"
-setnames(dt.amb, "y_amb", "y")
-dt.amb <- dt.amb[, .(y = sum(y, na.rm = T)), by=.(wave, type, imp_age, gender)]
-
-dt.sum <- rbind(dt.cmb, dt.amb, dt.grp)
-
-dt.sum <- dt.sum[, .(y = sum(y, na.rm=T)), by=.(wave, type, imp_age, gender)]
-dt.sum$type2 <- case_when(dt.sum$type == "hh" ~ "Household",
-                          dt.sum$type == "nhh" ~ "Non-household",
-                          dt.sum$type == "grp" ~ "Missing & aggregate")
-dt.sum$type2 <- factor(dt.sum$type2, levels=rev(c("Household", "Non-household", "Missing & aggregate")))
-
-dt.sum.sum <- dt.sum[, .(y = sum(y, na.rm=T)), by =.(wave, gender)]
-dt.sum.sum <- dt.sum.sum[!is.na(gender)]
-
-ggplot(dt.sum[imp_age < 85], aes(imp_age, y)) +
-  geom_bar(aes(fill = type2), stat="identity") +
-  geom_text(data = dt.sum.sum, aes(x = 49, y = 300, label = paste("Observed contacts: ", y)),
-             size = 2.7, hjust = 0) +
-  scale_x_continuous(expand=c(0,0)) +
-  scale_fill_manual(values = rev(c("#0D353F", "#017979", "#F57D6C"))) +
-  labs(x = "Participant age", y = "Frequency", fill = "Contact type") +
-  facet_grid(paste("Wave", wave) ~ gender) +
-  theme_bw() +
-  theme(
-    legend.position = "bottom",
-    legend.text = element_text(size = 8),
-    legend.title = element_text(size = 8),
-    legend.margin = margin(t = -2),
-    strip.background = element_blank(),
-    strip.text = element_text(size = 8),
-    axis.text = element_text(size = 8),
-    axis.title = element_text(size = 8),
-    panel.grid.minor = element_blank()
-  )
-
-ggsave("~/bayes-rate-consistency/paper/figures/sup-figure-5.jpeg",
-       units = "cm", width = 18, height = 18, dpi = 300)
+ggsave("~/Imperial/covimod-gp/paper/figures/sup-figure-5.jpeg", width = 18, height = 18, units = "cm")

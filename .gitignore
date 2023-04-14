@@ -48,8 +48,9 @@ thesis/figures/*
 paper/figures/*
 paper/tables/*
 
-# Do not upload data
-data/COVIMOD/*
+# Do not upload individual-level data
+data/COVIMOD/COVIMOD_data_*
+data/COVIMOD/codebook.xlsx
 data/POLYMOD/*
 data/simulations/datasets/*
 

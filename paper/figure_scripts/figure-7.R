@@ -1,21 +1,39 @@
 library(data.table)
 library(ggplot2)
 
-dt.covimod <- readRDS("~/Imperial/covimod-gp/results/hsgp-m52-lrd-5/intensity_marginal_a.rds")
-dt.polymod <- readRDS("~/Imperial/covimod-gp/results/polymod-hsgp-m52-rd/intensity_marginal.rds")
+dt <- readRDS("~/bayes-rate-consistency-output/results/hsgp-m52-lrd-5/intensity_marginal_a.rds")
+dt.noadj <- readRDS("~/bayes-rate-consistency-output/results/hsgp-m52-lrd-noadj-5/intensity_marginal_a.rds")
+dt.nogrp <- readRDS("~/bayes-rate-consistency-output/results/hsgp-m52-lrd-nogroup-5/intensity_marginal_a.rds")
+dt.norep <- readRDS("~/bayes-rate-consistency-output/results/hsgp-m52-lrd-norep-5/intensity_marginal_a.rds")
 
-dt.covimod$wave <- as.factor(paste("Wave", dt.covimod$wave))
+dt$type <- "Adjusted"
+dt.noadj$type <- "No adjustments"
+dt.norep$type <- "Adjusted for missing & aggregate\ncontact reports but not reporting fatigue"
+dt.nogrp$type <- "Adjusted for reporting fatigue but not\nmissing & aggregate contact reports"
 
-ggplot(dt.covimod, aes(age, intensity_M)) +
-  geom_ribbon(data = dt.polymod, aes(ymin = intensity_CL, ymax = intensity_CU), alpha = 0.2) +
-  geom_line(data = dt.polymod, aes(linetype = "POLYMOD")) +
-  geom_ribbon(aes(ymin = intensity_CL, ymax = intensity_CU, fill = wave), alpha = 0.3) +
-  geom_line(aes(color = wave, linetype = "COVIMOD"), show.legend = FALSE) +
+# Remove CI bands
+dt.noadj[, intensity_CL := NA]
+dt.noadj[, intensity_CU := NA]
+
+dt.nogrp[, intensity_CL := NA]
+dt.nogrp[, intensity_CU := NA]
+
+dt.norep[, intensity_CL := NA]
+dt.norep[, intensity_CU := NA]
+
+dt <- rbind(dt, dt.noadj, dt.norep, dt.nogrp)
+dt$type <- factor(dt$type, levels = c("Adjusted", "Adjusted for missing & aggregate\ncontact reports but not reporting fatigue",
+                                      "Adjusted for reporting fatigue but not\nmissing & aggregate contact reports", "No adjustments"))
+
+
+ggplot(dt, aes(age, intensity_M)) +
+  geom_ribbon(aes(ymin = intensity_CL, ymax = intensity_CU, group = type, fill = type), alpha = 0.3) +
+  geom_line(aes(linetype = type, color = type)) +
   scale_x_continuous(expand = c(0,0)) +
-  scale_color_manual(values = c("#264653", "#2A9D8F", "#E9C46A", "#F4A261", "#E76F51")) +
-  scale_fill_manual(values = c("#264653", "#2A9D8F", "#E9C46A", "#F4A261", "#E76F51")) +
+  ggsci::scale_color_npg() +
+  ggsci::scale_fill_npg() +
   labs(x = "Age of contacting individuals", y = "Contact intensities") +
-  facet_grid(gender ~ wave) +
+  facet_grid(gender~paste("Wave", wave)) +
   theme_bw() +
   guides(fill = "none") +
   theme(
@@ -29,4 +47,7 @@ ggplot(dt.covimod, aes(age, intensity_M)) +
     legend.margin = margin(t = -0.2, unit='cm')
   )
 
-ggsave("~/Imperial/covimod-gp/paper/figures/figure-7.jpeg", units = "cm", width = 18, height = 12, dpi = 300)
+ggsave("~/bayes-rate-consistency/paper/figures/figure-7.jpeg",
+       units = "cm", width = 18, height = 12, dpi = 300)
+
+

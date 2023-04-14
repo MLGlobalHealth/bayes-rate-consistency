@@ -7,7 +7,7 @@ repo.path <- "~/bayes-rate-consistency-output"
 
 # Simulated data
 dt.pre <- readRDS(file.path(repo.path, "data/simulations/datasets/preCOVID_2000_COVIMOD/data_1.rds"))
-dt.classic.pre <- readRDS(file.path(repo.path, "results/preCOVID_2000_COVIMOD/hsgp-m52-cd-20-20_1/intensity_matrix.rds"))
+dt.classic.pre <- readRDS(file.path(repo.path, "results/preCOVID_2000_COVIMOD/hsgp-m52-cd-20-20-1/intensity_matrix.rds"))
 dt.restruct.pre <- readRDS(file.path(repo.path, "results/preCOVID_2000_COVIMOD/hsgp-m52-rd-30-20-1/intensity_matrix.rds"))
 
 # Plot only MM contacts
@@ -100,6 +100,7 @@ p14 <- ggplot(dt.restruct.pre, aes(age, alter_age)) +
 
 p11 + p12 + p13 + p14 + plot_layout(nrow = 2, ncol = 2, widths = c(1,1), guides = "collect") & theme( legend.position = "right")
 
-ggsave(file.path(repo.path, "paper/figures", "figure-2.jpeg"), units = "cm", width = 13.37, height = 12, dpi=300)
+ggsave(file.path("bayes-rate-consistency", "paper/figures", "figure-2.tiff"),
+       device = "tiff", units = "cm", width = 13.37, height = 12, dpi=300)
 
 
