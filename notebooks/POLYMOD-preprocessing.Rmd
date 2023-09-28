@@ -57,6 +57,8 @@ dt_group[, y_grp := ifelse(y_grp > 60, 60, y_grp)]
 
 # Calculate the total number of group contacts by age and gender
 dt_group <- dt_group[, .(y_grp = sum(y_grp)), by = c("age", "gender")]
+
+sum(dt_group$y_grp)
 ```
 
 

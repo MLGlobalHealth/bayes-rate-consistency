@@ -1,53 +1,101 @@
 library(data.table)
 library(ggplot2)
+library(viridis)
+library(ggsci)
 
-dt <- readRDS("~/Imperial/covimod-gp/results/hsgp-m52-lrd-5/intensity_marginal_a.rds")
-dt.noadj <- readRDS("~/Imperial/covimod-gp/results/hsgp-m52-lrd-noadj-5/intensity_marginal_a.rds")
-dt.nogrp <- readRDS("~/Imperial/covimod-gp/results/hsgp-m52-lrd-nogroup-5/intensity_marginal_a.rds")
-dt.norep <- readRDS("~/Imperial/covimod-gp/results/hsgp-m52-lrd-norep-5/intensity_marginal_a.rds")
+data_zimbabwe <- readRDS("~/bayes-rate-consistency/data/Zimbabwe/zimbabwe_single_age.rds")
+dt_contacts <- data_zimbabwe$contacts
+dt_matrix <- readRDS("~/bayes-rate-consistency-output/results/hsgp-m52-rd-zimbabwe-single-age/intensity_matrix.rds")
+dt_matrix_stratified <- readRDS("~/bayes-rate-consistency-output/results/hsgp-m52-rd-zimbabwe-stratified-age/intensity_matrix.rds")
 
-dt$type <- "Adjusted"
-dt.noadj$type <- "No adjustments"
-dt.norep$type <- "Adjusted for missing & aggregate\ncontact reports but not reporting fatigue"
-dt.nogrp$type <- "Adjusted for reporting fatigue but not\nmissing & aggregate contact reports"
+dt_contacts[, m := y/N/S]
 
-# Remove CI bands
-dt.noadj[, intensity_CL := NA]
-dt.noadj[, intensity_CU := NA]
+# Calculate MAE
+dt_mae_single <- merge(dt_contacts, dt_matrix,
+                       by = c("age", "gender", "alter_age", "alter_gender"),
+                       all.x = TRUE)
+dt_mae_single[, error := abs(m - intensity_M)]
+mean(dt_mae_single$m)
+mean(dt_mae_single$error)
 
-dt.nogrp[, intensity_CL := NA]
-dt.nogrp[, intensity_CU := NA]
+dt_mae_stratified <- merge(dt_contacts, dt_matrix_stratified,
+                           by = c("age", "gender", "alter_age", "alter_gender"),
+                           all.x = TRUE)
+dt_mae_stratified[, error := abs(m - intensity_M)]
+print(mean(dt_mae_stratified$error))
 
-dt.norep[, intensity_CL := NA]
-dt.norep[, intensity_CU := NA]
+dt_contacts[, comb := paste(gender, "to", alter_gender)]
+dt_matrix[, comb := paste(gender, "to", alter_gender)]
+dt_matrix_stratified[, comb := paste(gender, "to", alter_gender)]
 
-dt <- rbind(dt, dt.noadj, dt.norep, dt.nogrp)
-dt$type <- factor(dt$type, levels = c("Adjusted", "Adjusted for missing & aggregate\ncontact reports but not reporting fatigue",
-                                      "Adjusted for reporting fatigue but not\nmissing & aggregate contact reports", "No adjustments"))
-
-
-ggplot(dt, aes(age, intensity_M)) +
-  geom_ribbon(aes(ymin = intensity_CL, ymax = intensity_CU, group = type, fill = type), alpha = 0.3) +
-  geom_line(aes(linetype = type, color = type)) +
-  scale_x_continuous(expand = c(0,0)) +
-  ggsci::scale_color_npg() +
-  ggsci::scale_fill_npg() +
-  labs(x = "Age of contacting individuals", y = "Contact intensities") +
-  facet_grid(gender~paste("Wave", wave)) +
+plt_empirical <- ggplot(dt_contacts[m <= 4.0], aes(age, alter_age)) +
+  geom_tile(aes(fill = m)) +
+  scale_fill_viridis(option = "H", limits = c(0, 3)) +
+  coord_equal(expand = FALSE) +
+  labs(x = "Age of contacting individuals",
+       y = "Age of contacts",
+       fill = "Intensity") +
+  facet_grid(~comb) +
   theme_bw() +
-  guides(fill = "none") +
+  guides(fill = guide_colourbar(barwidth = 0.8)) +
   theme(
+    aspect.ratio = 1,
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.text.y = element_text(size = 7),
+    axis.title = element_text(size = 8),
+    axis.title.x = element_blank(),
+    legend.text = element_text(size = 8),
+    legend.title = element_text(size = 8),
+    legend.margin = margin(l = -0.2, unit = "cm"),
     strip.background = element_blank(),
     strip.text = element_text(size = 8),
-    axis.text = element_text(size = 8),
-    axis.title = element_text(size = 8),
-    legend.position = "bottom",
-    legend.title = element_blank(),
-    legend.text = element_text(size = 8),
-    legend.margin = margin(t = -0.2, unit='cm')
+    plot.margin = margin()
   )
 
-ggsave("~/Imperial/covimod-gp/paper/figures/figure-5.jpeg",
-       units = "cm", width = 18, height = 12, dpi = 300)
+plt_single <- ggplot(dt_matrix, aes(x = age, y = alter_age)) +
+  geom_tile(aes(fill = intensity_M)) +
+  viridis::scale_fill_viridis(option = "H", limits = c(0, 3)) +
+  coord_equal(expand = 0) +
+  labs(x = "Age of contacting individuals", y = "Age of contacts", fill = "Intensity") +
+  facet_grid(~comb) +
+  theme_bw() +
+  guides(fill = guide_colourbar(barwidth = 0.8)) +
+  theme(
+    axis.text = element_text(size = 8),
+    axis.title.x = element_blank(),
+    axis.title.y = element_text(size = 8),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    strip.background = element_blank(),
+    strip.text = element_blank(),
+    legend.text = element_text(size = 8),
+    legend.title = element_text(size = 8),
+    legend.margin = margin(l = -0.2, unit = "cm"),
+    plot.margin = margin()
+  )
 
+plt_stratified <- ggplot(dt_matrix_stratified, aes(x = age, y = alter_age)) +
+  geom_tile(aes(fill = intensity_M)) +
+  viridis::scale_fill_viridis(option = "H", limits = c(0, 3)) +
+  coord_equal(expand = 0) +
+  labs(x = "Age of contacting individuals", y = "Age of contacts", fill = "Intensity") +
+  facet_grid(~comb) +
+  theme_bw() +
+  guides(fill = guide_colourbar(barwidth = 0.8)) +
+  theme(
+    axis.text = element_text(size = 8),
+    axis.title.x = element_text(size = 8),
+    axis.title.y = element_text(size = 8),
+    strip.background = element_blank(),
+    strip.text = element_blank(),
+    legend.text = element_text(size = 8),
+    legend.title = element_text(size = 8),
+    legend.margin = margin(l = -0.2, unit = "cm"),
+    plot.margin = margin()
+  )
 
+plt_empirical / plt_single / plt_stratified + plot_layout(nrow = 3, guides = "collect")
+
+ggsave("~/bayes-rate-consistency/paper/figures/figure-5.tiff",
+       device = "tiff", width = 19, height = 15.5, units = "cm")

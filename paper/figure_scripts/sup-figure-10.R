@@ -1,39 +1,46 @@
 library(data.table)
+library(bayesplot)
+library(posterior)
+library(cmdstanr)
 library(ggplot2)
 
-dt.covimod <- readRDS("~/Imperial/covimod-gp/results/hsgp-m52-lrd-5/intensity_marginal_a.rds")
-dt.covimod <- dt.covimod[, .(wave, age, ratioMF_CL, ratioMF_CU, ratioMF_M)]
-dt.covimod <- unique( dt.covimod )
-dt.covimod[, wave := paste("Wave", wave)]
+cat("\n========== Making trace plots ==========\n")
+cat(" Loading fit summary...\n")
+fit_summary <- readRDS("~/bayes-rate-consistency-output/results/hsgp-m52-lrd_COVIMOD_multi_1234/fit_summary.rds")
 
-dt.polymod <- readRDS("~/Imperial/covimod-gp/results/polymod-hsgp-m52-rd/intensity_marginal.rds")
-dt.polymod <- unique( dt.polymod[, !c("gender", "intensity_CL", "intensity_CU", "intensity_M")] )
-dt.polymod$wave <- "POLYMOD"
+cat(" Loading Stan fit...\n")
+fit <- readRDS("~/bayes-rate-consistency-output/stan_fits/hsgp-m52-lrd_COVIMOD_multi_1234.rds")
 
-dt <- rbind(dt.polymod, dt.covimod)
-dt$wave <- factor(dt$wave, levels = c("POLYMOD", "Wave 1", "Wave 2", "Wave 3", "Wave 4", "Wave 5"))
+# Extract parameters
+cat(" Extracting posterior estimates...\n")
+par_min_ess <- fit_summary[which.min(fit_summary$ess_bulk), "variable"]
+par_max_rhat <- fit_summary[which.max(fit_summary$rhat), "variable"]
+posterior_draws <- fit$draws(variables = c(par_min_ess, par_max_rhat))
 
-ggplot(dt, aes(age, ratioMF_M)) +
-  geom_hline(aes(yintercept = 1.0), linetype = "dashed") +
-  geom_ribbon(aes(ymin = ratioMF_CL, ymax = ratioMF_CU), alpha = 0.3, fill = "#AF0171") +
-  geom_line(color = "#AF0171") +
-  labs(x = "Age of contacting individuals", y = "Ratio of female to male contact intensity") +
-  scale_x_continuous(expand = c(0, 0)) +
-  scale_y_continuous(breaks = seq(0, 2, 0.2)) +
-  facet_grid(~wave) +
-  theme_bw() +
-  theme(
-    strip.background = element_blank(),
-    strip.text = element_text(size = 8),
-    axis.text = element_text(size = 8),
-    axis.title = element_text(size = 8),
-    legend.position = "bottom",
-    legend.title = element_text(size = 8),
-    legend.text = element_text(size = 8),
-    legend.margin = margin(t = -0.2, unit='cm')
-  )
+# Make trace plots
+cat(" Making trace plots...\n")
+bayesplot::color_scheme_set(scheme = "mix-blue-pink")
+plt <- bayesplot::mcmc_trace(posterior_draws,
+                             facet_args = list(nrow = 2, ncol = 1)) +
+  theme(axis.title = element_text(size = 8),
+        axis.text = element_text(size = 8),
+        strip.text = element_text(size = 8),
+        legend.text = element_text(size = 8),
+        legend.title = element_text(size = 8),
+        plot.title = element_text(size = 9),
+        plot.subtitle = element_text(size = 8))
 
-ggsave("~/Imperial/covimod-gp/paper/figures/sup-figure-10.jpeg",
-       units = "cm", width = 18, height = 7, dpi = 300)
+cat(" Saving plots...\n")
+if (!dir.exists("~/bayes-rate-consistency/paper/figures")) {
+  dir.create("~/bayes-rate-consistency/paper/figures", recursive = TRUE)
+}
+ggsave(file = file.path("~/bayes-rate-consistency/paper/figures",
+                        'sup-figure-10.png'),
+       plot = plt,
+       width = 19,
+       height = 10.5,
+       units = "cm")
+cat(" DONE.\n")
+
 
 

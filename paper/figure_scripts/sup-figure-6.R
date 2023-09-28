@@ -39,4 +39,5 @@ plt.m32 <- plot_simulation(dt.pre.m32, title = "Pre-COVID19, N=2000, Matérn 3/2
 
 plt.se / plt.m52 / plt.m32 + plot_layout(nrow = 3, guides = "collect")
 
-ggsave("~/Imperial/covimod-gp/paper/figures/sup-figure-2.jpeg", width = 18, height = 18, units = "cm")
+ggsave("~/Imperial/covimod-gp/paper/figures/sup-figure-6
+       .jpeg", width = 18, height = 18, units = "cm")
