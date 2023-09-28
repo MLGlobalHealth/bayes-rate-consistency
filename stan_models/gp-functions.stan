@@ -259,6 +259,33 @@ matrix hsgp_matern52(int A, real alpha, real rho1, real rho2, real L1, real L2, 
   return(f);
 }
 
+/**  2D HSGP for rectangular matrices
+  *
+  * @param A: Size of the first dimension
+  * @param B: Size of the second dimension
+  * @param alpha: GP scaling parameter
+  * @param rho1, rho2: GP length-scale parameter on participants and contacts age dimensions
+  * @param L1, L2: HSGP parameters
+  * @param M1, M2: HSGP parameters
+  * @param z:
+  * @return A two dimensional Gaussian process fuction
+  */
+  
+matrix hsgp_rect(int A, int B, real alpha, real rho1, real rho2, real L1, real L2, int M1, int M2,
+            matrix PHI1, matrix PHI2, matrix z)
+{
+  vector[M1] sqrt_spd_1 = diagSPD_EQ(alpha, rho1, L1, M1);
+  vector[M2] sqrt_spd_2 = diagSPD_EQ(alpha, rho2, L2, M2);
+
+  matrix[A,B] f = kron_mvprod(
+    diag_post_multiply( PHI1, sqrt_spd_1 ),
+    diag_post_multiply( PHI2, sqrt_spd_2 ),
+    z
+  );
+
+  return(f);
+}
+
 /** Restructured Hilbert Space approximate 2D Gaussian process
   *
   * @param A: Number of ages for particiapnts
