@@ -259,6 +259,13 @@ add_row_major_idx <- function(stan_data,
     stan_data$ROW_MAJOR_IDX_M <- d[gender == "Male" & alter_gender == "Male"]$row_major_idx
     stan_data$ROW_MAJOR_IDX_F <- d[gender == "Female" & alter_gender == "Female"]$row_major_idx
 
+    m = stan_data$ROW_MAJOR_IDX_M - 1
+    f = stan_data$ROW_MAJOR_IDX_F - 1
+    stan_data$ROW_MAJOR_IDX_M_AGE <- 1 + (m - m%%13)/13
+    stan_data$ROW_MAJOR_IDX_F_AGE <- 1 + (f - f%%13)/13
+    stan_data$ROW_MAJOR_IDX_M_STRATA <- 1 + m %% 13
+    stan_data$ROW_MAJOR_IDX_F_STRATA <- 1 + f %% 13
+
     return(stan_data)
   }
 }
@@ -536,11 +543,11 @@ add_std_age_idx <- function(stan_data){
 
   age_idx <- seq.int(0,A-1,1)
   diff_idx <- seq.int(-A+1, A-1, 1)
-  strata_idx <- seq.int(0, C-1, 1)
+  strata_midpoint <- c(2, 7, 12, 17, 22, 29, 39, 49, 59, 67, 72, 77, 82) # Hard coded
 
   age_idx_std <- (age_idx - mean(age_idx))/sd(age_idx)
   diff_idx_std <- (diff_idx - mean(diff_idx))/sd(diff_idx)
-  strata_idx_std <- (strata_idx - mean(strata_idx))/sd(strata_idx)
+  strata_idx_std <- (strata_midpoint - mean(strata_midpoint))/sd(strata_midpoint)
 
   stan_data$age_idx_std <- age_idx_std
   stan_data$diff_idx_std <- diff_idx_std
@@ -571,6 +578,7 @@ add_hsgp_parms <- function(stan_data, C, M1, M2){
   stan_data$C2 = C
   stan_data$M1 = M1
   stan_data$M2 = M2
+  stan_data$M3 = stan_data$C - 2
 
   return(stan_data)
 }
