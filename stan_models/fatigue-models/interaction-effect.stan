@@ -1,10 +1,11 @@
 functions {
-#include gp-functions.stan
+#include ../gp-functions.stan
+#include ../utils.stan
 }
 
 data {
   int<lower=1> U;       // Survey wave x repeated response
-  int<lower=1> T;       // Survey wave
+  int<lower=1> W;       // Survey wave
   int<lower=1> R;       // Repeated reports
   int<lower=1> A;       // Number of age inputs
   int<lower=1> C;       // Number of age strata
@@ -38,7 +39,7 @@ data {
   // Population size offsets
   row_vector[A] pop_M, pop_F;
 
-  array[T, R] int map_tr_to_u;
+  array[W, R] int map_tr_to_u;
   matrix[A, C] map_age_to_strata; // Indicator Matrix that maps age to age strata
   array[A*A] int NN_IDX; // Index indicating the locations of the non-nuisance parameters in the resturctured HSGP matrix
 
@@ -80,43 +81,34 @@ transformed data {
   matrix[A, M1] PHI4 = PHI(A, M1, L3, age_idx_std); //cnt age for repeat effect
 
   // Vectorize Y
-  array[N] int<lower=0> Y = append_array(
-    Y_MM,
-    append_array(
-      Y_FF,
-      append_array(
-        Y_MF,
-        Y_FM
-      )
-    )
-  );
+  array[N] int<lower=0> Y = append_array_int4(Y_MM, Y_FF, Y_MF, Y_FM);
 }
 
 parameters {
   vector[G] beta_0; // contact rate baseline
-  vector[T-1] tau; // time effect
-  vector[R-1] rho; // repeated response effect
+  vector[W-1] tau; // time effect
+  vector[R-1] rho_0; // repeated response effect
   real<lower=0> nu; // over disperison
 
-  matrix<lower=0>[T, G-1] gp_lengthscale_1; // length-scale
-  matrix<lower=0>[T, G-1] gp_lengthscale_2; // length-scale
+  matrix<lower=0>[W, G-1] gp_lengthscale_1; // length-scale
+  matrix<lower=0>[W, G-1] gp_lengthscale_2; // length-scale
   vector<lower=0>[R-1] rho_lengthscale_1; // length-scale
   vector<lower=0>[R-1] rho_lengthscale_2; // length-scale
 
-  matrix<lower=0, upper=pi()/2 >[T, G-1] gp_sigma_unif; // magnitude
+  matrix<lower=0, upper=pi()/2 >[W, G-1] gp_sigma_unif; // magnitude
   vector<lower=0, upper=pi()/2 >[R-1] rho_sigma_unif; // magnitude
 
-  array[T] matrix[(G-1)*M2, M1] z; // HSGP basis function coefficients
-  array[R-1] matrix[M2, M1] zz; // HSGP basis function coefficients
+  array[W] matrix[(G-1)*M1, M2] z; // HSGP basis function coefficients
+  array[R-1] matrix[M1, M1] zz; // HSGP basis function coefficients
 
 }
 
 transformed parameters {
-  matrix<lower=0>[T, G-1] gp_sigma = tan(gp_sigma_unif); // Reparametrize Half-Cauchy for stability
+  matrix<lower=0>[W, G-1] gp_sigma = tan(gp_sigma_unif); // Reparametrize Half-Cauchy for stability
   vector<lower=0>[R-1] g_sigma = tan(rho_sigma_unif); // Reparametrize Half-Cauchy for stability
 
-  array[T, G] matrix[A, A] log_cnt_rate; // Expose for easy access
-  array[T, G-1] matrix[A, A] f; // gamma_(tab)^(gf)
+  array[W, G] matrix[A, A] log_cnt_rate; // Expose for easy access
+  array[W, G-1] matrix[A, A] f; // gamma_(tab)^(gf)
   array[R-1] matrix[A, C] f_rho; // gamma_(tab)^(gf)
   array[R-1] matrix[A,C] rho;
 
@@ -125,13 +117,13 @@ transformed parameters {
   vector[N_M] mu_flat_MF;
   vector[N_F] mu_flat_FM;
 
-  for (t in 1:T){
+  for (t in 1:W){
     f[t, MM] = hsgp_restruct(A, gp_sigma[t,MM], gp_lengthscale_1[t,MM], gp_lengthscale_2[t,MM],
-                             L1, L2, M1, M2, PHI1, PHI2, z[t, 1:M2,], NN_IDX);
+                             L1, L2, M1, M2, PHI1, PHI2, z[t, 1:M1,], NN_IDX);
     f[t, FF] = hsgp_restruct(A, gp_sigma[t,FF], gp_lengthscale_1[t,FF], gp_lengthscale_2[t,FF],
-                             L1, L2, M1, M2, PHI1, PHI2, z[t, (M2+1):2*M2,], NN_IDX);
+                             L1, L2, M1, M2, PHI1, PHI2, z[t, (M1+1):2*M1,], NN_IDX);
     f[t, MF] = hsgp_restruct(A, gp_sigma[t,MF], gp_lengthscale_1[t,MF], gp_lengthscale_2[t,MF],
-                             L1, L2, M1, M2, PHI1, PHI2, z[t, (2*M2+1):3*M2,], NN_IDX);
+                             L1, L2, M1, M2, PHI1, PHI2, z[t, (2*M1+1):3*M1,], NN_IDX);
 
     if(t == 1){
       log_cnt_rate[t, MM] = beta_0[MM] + symmetrize_from_lower_tri(f[t, MM]);
@@ -165,9 +157,9 @@ transformed parameters {
         // stratified expected contact counts
         
         if(r > 1){
-           f_rho[r-1] = hsgp_c(A, C, g_sigma[r-1], rho_lengthscale_1[r-1], rho_lengthscale_2[r-1], L3, L3, 
+           f_rho[r-1] = hsgp_rect(A, C, g_sigma[r-1], rho_lengthscale_1[r-1], rho_lengthscale_2[r-1], L3, L3, 
                               M1, M1, PHI3, PHI4, zz[r-1]);
-           rho[r-1] = -exp(f_rho[r-1] + rho[r-1]);
+           rho[r-1] = -exp(f_rho[r-1] + rho_0[r-1]);
               
            for(ind in sm:em){
                mu_flat_MM[ind] = m_flat_MM[ROW_MAJOR_IDX_M[ind]] * exp( rho[r-1, ROW_MAJOR_IDX_M_AGE[ind],ROW_MAJOR_IDX_M_STRATA[ind]] + log_O_M[ind] );
@@ -192,7 +184,7 @@ model {
   // Additive linear parameters
   target += normal_lpdf(beta_0 | 0, 10); // Baseline contact rate
   target += normal_lpdf(tau | 0, 1);  // Survey wave
-  target += normal_lpdf(rho | 0, 1);  // Repeated response
+  target += normal_lpdf(rho_0 | 0, 1);  // Repeated response
 
   // GP parameters
   target += inv_gamma_lpdf( to_vector(gp_lengthscale_1) | 10, 10);
@@ -201,7 +193,7 @@ model {
   target += inv_gamma_lpdf( rho_lengthscale_2 | 10, 10);
   target += cauchy_lpdf( to_vector(gp_sigma) | 0, 1);
   target += cauchy_lpdf( g_sigma | 0, 1);
-  for (t in 1:T){ target += std_normal_lpdf( to_vector(z[t]) ); }
+  for (t in 1:W){ target += std_normal_lpdf( to_vector(z[t]) ); }
   for (r in 1:(R-1)){ target += std_normal_lpdf( to_vector(zz[r]) ); }
 
   // Negative binomial parameters

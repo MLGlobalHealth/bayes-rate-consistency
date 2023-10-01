@@ -1,7 +1,7 @@
 #!/bin/bash
 REPO_PATH="/rds/general/user/sd121/home/bayes-rate-consistency"
 OUT_PATH="/rds/general/user/sd121/home/bayes-rate-consistency-output"
-CONFIG_FILE="covimod-longitudinal.yml"
+CONFIG_FILE="fatigue-independent.yml"
 
 # Create main script
 cat > "$OUT_PATH/covimod-fullproc.pbs" <<EOF

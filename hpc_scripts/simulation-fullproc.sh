@@ -1,13 +1,13 @@
 #!/bin/bash
 REPO_PATH=/rds/general/user/sd121/home/bayes-rate-consistency
 OUT_PATH=/rds/general/user/sd121/home/bayes-rate-consistency-output
-CONFIG_FILE=simulation-preCOV2000AA.yml
+CONFIG_FILE=simulation-inCOV2000AA.yml
 
 # Create main script
 cat > "$OUT_PATH/simulation-fullproc.pbs" <<EOF
 #!/bin/bash
 
-#PBS -l walltime=08:00:00
+#PBS -l walltime=04:00:00
 #PBS -l select=1:ncpus=4:ompthreads=1:mem=50gb
 #PBS -J 1-10
 

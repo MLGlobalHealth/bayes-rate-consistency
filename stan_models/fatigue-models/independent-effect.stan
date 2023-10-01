@@ -1,5 +1,6 @@
 functions {
 #include ../gp-functions.stan
+#include ../utils.stan
 }
 
 data {
@@ -52,8 +53,8 @@ data {
   int<lower=1> M1;     // number of basis functions
   real<lower=0> C2;    // determines the boundary value L for age of contacted individuals (strata_idx)
   int<lower=1> M2;     // number of basis functions
-  //real<lower=0> C3;
-  //int<lower=1> M3;
+  // real<lower=0> C3;
+  int<lower=1> M3;
 }
 
 transformed data {
@@ -73,24 +74,14 @@ transformed data {
   // HSGP basis functions in both age dimensions
   real L1 = C1 * max(diff_idx_std);
   real L2 = C2 * max(age_idx_std);
-  real L3 = C2 * max(age_idx_std);
+  real L3 = C2 * max(strata_idx_std);
   matrix[2*A-1, M1] PHI1 = PHI(2*A-1, M1, L1, diff_idx_std);
   matrix[A, M2] PHI2 = PHI(A, M2, L2, age_idx_std);
-  matrix[C, M1] PHI3 = PHI(C, M1, L3, strata_idx_std); #participant strata for p
-  matrix[A, M1] PHI4 = PHI(A, M1, L3, age_idx_std); #cnt age for p
-
+  matrix[C, M3] PHI3 = PHI(C, M3, L3, strata_idx_std); #participant strata for p
+  // matrix[A, M2] PHI4 = PHI(A, M2, L3, age_idx_std); #cnt age for p
 
   // Vectorize Y
-  array[N] int<lower=0> Y = append_array(
-    Y_MM,
-    append_array(
-      Y_FF,
-      append_array(
-        Y_MF,
-        Y_FM
-      )
-    )
-  );
+  array[N] int<lower=0> Y = append_array_int4(Y_MM, Y_FF, Y_MF, Y_FM);
 }
 
 parameters {
@@ -110,8 +101,8 @@ parameters {
 
 
   array[W] matrix[(G-1)*M1, M2] z; // HSGP basis function coefficients
-  array[R-1] vector[M1] zz1; // HSGP basis function coefficients
-  array[R-1] vector[M1] zz2; // HSGP basis function coefficients
+  array[R-1] vector[M3] zz1; // HSGP basis function coefficients
+  array[R-1] vector[M2] zz2; // HSGP basis function coefficients
 } 
 
 transformed parameters {
@@ -171,8 +162,8 @@ transformed parameters {
 
         if(r > 1){
 
-          f_1[,r-1] = PHI3 * (diagSPD_EQ(g_sigma1[r-1], gp_rho1[r-1], L3, M2) .* zz1[r-1]);
-          f_2[,r-1] = PHI4 * (diagSPD_EQ(g_sigma2[r-1], gp_rho2[r-1], L3, M2) .* zz2[r-1]);
+          f_1[,r-1] = PHI3 * (diagSPD_EQ(g_sigma1[r-1], gp_rho1[r-1], L3, M3) .* zz1[r-1]);
+          f_2[,r-1] = PHI2 * (diagSPD_EQ(g_sigma2[r-1], gp_rho2[r-1], L2, M2) .* zz2[r-1]);
           
           for(i in 1:A){
             for(j in 1:C){
@@ -218,17 +209,7 @@ model {
 
   // Update the log-likelihood
   {
-    vector[N] mu_flat = append_row(
-      mu_flat_MM,
-      append_row(
-        mu_flat_FF,
-        append_row(
-          mu_flat_MF,
-          mu_flat_FM
-        )
-      )
-    );
-
+    vector[N] mu_flat = append_row_4(mu_flat_MM, mu_flat_FF, mu_flat_MF, mu_flat_FM);
     target += neg_binomial_lpmf(Y | mu_flat / nu + 1e-13, inv(nu));
   }
 }
@@ -239,16 +220,7 @@ generated quantities {
   array[N] real log_lik;
 
   {
-    vector[N] mu_flat = append_row(
-      mu_flat_MM,
-      append_row(
-        mu_flat_FF,
-        append_row(
-          mu_flat_MF,
-          mu_flat_FM
-        )
-      )
-    );
+    vector[N] mu_flat = append_row_4(mu_flat_MM, mu_flat_FF, mu_flat_MF, mu_flat_FM);
 
     yhat_strata = neg_binomial_rng( mu_flat / nu + 1e-13, inv(nu) );
 
