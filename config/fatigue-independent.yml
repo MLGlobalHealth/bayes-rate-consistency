@@ -1,0 +1,25 @@
+seed: 1234
+
+data:
+  path: "COVIMOD/COVIMOD_multi_1234.rds"
+  waves: 5
+  num_participant_age_groups: 85
+  num_contact_age_groups: 13
+  single_contact_age: FALSE
+
+model:
+  name: "fatigue-models/independent-effect"
+  hsgp_binf: 1.5
+  hsgp_m1: 40
+  hsgp_m2: 30
+  chains: 8
+  warmup: 500
+  sampling: 1000
+  max_treedepth: 13
+  adapt_delta: 0.90
+  refresh: 50
+
+postprocess:
+  mixing: TRUE
+  ppc: FALSE
+  plot: FALSE
