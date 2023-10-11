@@ -65,10 +65,12 @@ dt_contacts <- data$contacts
 dt_offsets <- data$offsets
 dt_population <- data$pop
 
+source(file.path(cli_params$repo_path, "R", "make_convergence_diagnostic_stats.R"))
 source(file.path(cli_params$repo_path, "R", "make_stan_data.R"))
-source(file.path(cli_params$repo_path, "R", "postprocess-diagnostic.R"))
-source(file.path(cli_params$repo_path, "R", "postprocess-plotting.R"))
+source(file.path(cli_params$repo_path, "R", "make_ppd_check.R"))
 source(file.path(cli_params$repo_path, "R", "summarise_posterior_rho.R"))
+source(file.path(cli_params$repo_path, "R", "extract_posterior_intensity.R"))
+source(file.path(cli_params$repo_path, "R", "summarise_posterior_intensity.R"))
 
 ##### ---------- Assess convergence and mixing ---------- #####
 if (config$postprocess$mixing) {
@@ -81,20 +83,15 @@ if (config$postprocess$mixing) {
   cat("\n Making trace plots and pairs plots of GP params\n")
   bayesplot::color_scheme_set(scheme = "mix-blue-pink")
 
-  pars <- c('gp_sigma',
-            'gp_lengthscale_1',
-            'gp_lengthscale_2',
-            'rho_lengthscale_1',
-            'rho_lengthscale_2')
-  pars_po <- fit$draws(pars, inc_warmup = FALSE)
+  pars_po <- fit$draws(config$postprocess$pars, inc_warmup = FALSE)
 
-  gp_parms_summary <- summarise_draws(po_gp, ~quantile(.x, probs = c(0.025, 0.25, 0.5, 0.75, 0.975)))
+  gp_parms_summary <- summarise_draws(pars_po, ~quantile(.x, probs = c(0.025, 0.25, 0.5, 0.75, 0.975)))
   saveRDS(gp_parms_summary,
           file = file.path(export_path, "gp_parms_summary.rds"))
 
   np <- nuts_params(fit)
 
-  for (w in 1:config$data$waves) {
+  lapply(1:config$data$waves, function(w) {
     .pattern <- paste0(pars, "\\[", w, ",[1-4]\\]")
     p <- bayesplot::mcmc_trace(pars_po,
                                regex_pars = .pattern,
@@ -102,14 +99,14 @@ if (config$postprocess$mixing) {
                                np = np)
     ggsave(file = file.path(export_fig_path, paste0('mcmc_trace_', w, '.pdf')),
            plot = p, h = 20, w = 20, limitsize = FALSE)
-
+  
     p <- bayesplot::mcmc_pairs(pars_po,
                                regex_pars = .pattern,
                                off_diag_args = list(size = 0.3, alpha = 0.3),
                                np = np)
     ggsave(file = file.path(export_fig_path, paste0('mcmc_pairs_', w, '.pdf')),
            plot = p, h = 20, w = 20, limitsize = FALSE)
-  }
+  })
 }
 
 ##### ---------- Posterior predictive checks ---------- #####
@@ -124,34 +121,32 @@ if (config$postprocess$ppc) {
 }
 
 cat(" Extracting posterior contact intensities ...\n")
-po <- fit$draws(c("log_cnt_rate", "rho"),
-                inc_warmup = FALSE,
-                format = "draws_matrix")
+if (config$postprocess$summarise) {
+  po <- fit$draws(c("log_cnt_rate", "rho"), inc_warmup = FALSE)
 
-dt_posterior_rho_summary <- summarise_posterior_rho(po, outdir = export_path)
+  # Summarise reporting fatigue effects
+  dt_posterior_rho_summary <- summarise_posterior_rho(po, outdir = export_path)
 
-dt_posterior <- extract_posterior_intensity(po, dt_population)
-dt_matrix <- summarise_posterior_intensity(dt_posterior,
-                                           type = "matrix",
-                                           outdir = export_path)
+  # Summarise contact intensity
+  dt_posterior <- extract_posterior_intensity(po, dt_population)
 
-dt_sliced <- summarise_posterior_intensity(dt_posterior,
-                                           dt_offsets,
-                                           type = "sliced",
-                                           outdir = export_path)
-
-dt_margin_a <- summarise_posterior_intensity(dt_posterior,
-                                             type = "margin-a",
+  dt_matrix <- summarise_posterior_intensity(dt_posterior,
+                                             type = "matrix",
                                              outdir = export_path)
-
-dt_margin_b <- summarise_posterior_intensity(dt_posterior,
-                                             type = "margin-b",
-                                             outdir = export_path)
-
-dt_margin_c <- summarise_posterior_intensity(dt_posterior,
-                                             dt_offsets,
-                                             type = "margin-c",
-                                             outdir = export_path)
-
+  # dt_sliced <- summarise_posterior_intensity(dt_posterior, TODO: Debug
+  #                                            dt_offsets,
+  #                                            type = "sliced",
+  #                                            outdir = export_path)
+  dt_margin_a <- summarise_posterior_intensity(dt_posterior,
+                                               type = "margin-a",
+                                               outdir = export_path)
+  dt_margin_b <- summarise_posterior_intensity(dt_posterior,
+                                               type = "margin-b",
+                                               outdir = export_path)
+  # dt_margin_c <- summarise_posterior_intensity(dt_posterior,
+  #                                              dt_offsets,
+  #                                              type = "margin-c",
+  #                                              outdir = export_path)
+}
 
 cat("\n DONE.\n")

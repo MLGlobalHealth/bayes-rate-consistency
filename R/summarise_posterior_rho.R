@@ -27,12 +27,12 @@ summarise_posterior_rho <- function(posterior_draws, outdir = NULL){
   p_labs <- c('M','CL','CU')
 
   posterior_draws <- subset(posterior_draws, "rho")
-  dt_posterior <- setDT(reshape2::melt(posterior_draws))
+  dt_posterior <- as.data.table(reshape2::melt(posterior_draws))
 
   dt_summary <- dt_posterior[, .(q = quantile(value, prob = ps, na.rm = TRUE), q_label = p_labs),
                               by = variable]
-  dt_summary[, q := exp(q)]
-  dt_summary <- data.table::dcast(dt_summary, variable ~ q_label, value.var = q)
+
+  dt_summary <- data.table::dcast(dt_summary, variable ~ q_label, value.var = "q")
 
   if(!is.null(outdir)){
     saveRDS(dt_summary, file.path(outdir, "posterior_rho_summary.rds"))
